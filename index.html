@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>マインスイーパー（通常ルール）</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="panel">
+    <h2>マインスイーパー（通常ルール）</h2>
+
+    <div class="preset-buttons">
+      <button class="preset" data-w="5" data-h="5" data-m="10">5</button>
+      <button class="preset" data-w="6" data-h="6" data-m="12">6</button>
+      <button class="preset" data-w="7" data-h="7" data-m="15">7</button>
+      <button class="preset" data-w="8" data-h="8" data-m="20">8</button>
+    </div>
+    
+    <div class="controls">
+      <button id="reset" class="primary">開始</button>
+    </div>
+<div class="control">
+<button id="flagToggle">🚩 フラグモード OFF</button>
+<div id="statusText"></div>
+</div>
+<div id="board" class="board"></div>
+
+<script src="perse.js"></script>
+<script src="script.js"></script>
+
+</body>
+</html>

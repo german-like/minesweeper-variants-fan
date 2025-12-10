@@ -120,18 +120,24 @@ button.toggle-flag.active{
 }
 
 /* --- ボード周り --- */
-.board-wrap{
+.board-wrap {
   background:#374151;
   padding:20px;
   border-radius:12px;
   box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+
+  display: flex;            /* 追加 */
+  justify-content: center;  /* 横中央 */
+  align-items: center;      /* 縦中央（必要なら） */
 }
 
-.board{
-  display:grid;
-  gap:var(--gap);
+.board {
+  display: grid;
+  gap: var(--gap);
   touch-action: manipulation;
-  user-select:none;
+  user-select: none;
+
+  justify-content: center;  /* 追加：グリッド内のセルも中央 */
 }
 
 /* --- セル（ここを濃く＆クッキリ） --- */

@@ -1,6 +1,8 @@
 // minesweeper_logic_generator.js
 // 論理のみで解けるか判定するソルバー + 盤面生成
 
+export { generateSolvableBoard, isLogicSolvable };
+
 // ----------------------
 // ユーティリティ
 // ----------------------

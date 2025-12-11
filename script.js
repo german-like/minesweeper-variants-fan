@@ -1,4 +1,4 @@
-import { applyBasicLogic } from "./solver_inference/base.js";
+import { applyBasicLogic } from "./solver_inference/index.ts";
 
 const rows = 5;
 const cols = 5;

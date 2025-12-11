@@ -1,44 +1,42 @@
 #gameBoard {
     display: grid;
-    border: 3px solid #333;
+    border: 2px solid #555;
     margin-top: 20px;
-    gap: 3px; /* マス間にスペースを追加して見やすく */
-    background-color: #222; /* グリッド背景を暗くしてコントラストを強調 */
-    padding: 5px;
-    border-radius: 8px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.5); /* 少し立体感 */
+    gap: 2px;
+    background-color: #333;
+    padding: 3px;
+    border-radius: 4px;
 }
 
 .cell {
-    width: 40px;
-    height: 40px;
-    border-radius: 6px;
+    width: 36px;
+    height: 36px;
     display: flex;
     justify-content: center;
     align-items: center;
-    font-size: 20px;
+    font-size: 18px;
     font-weight: bold;
     cursor: pointer;
-    background: linear-gradient(145deg, #e0e0e0, #cacaca);
-    box-shadow: 5px 5px 10px #aaa, -5px -5px 10px #fff; /* ネオモーフィズム風 */
-    transition: all 0.2s ease;
+    background-color: #555;
+    border: 1px solid #444;
+    color: #eee;
     user-select: none;
+    transition: background-color 0.1s ease, transform 0.1s ease;
 }
 
 .cell:hover:not(.revealed) {
-    transform: translateY(-2px);
-    box-shadow: 3px 3px 8px #888, -3px -3px 8px #fff;
-    background: linear-gradient(145deg, #f0f0f0, #d0d0d0);
+    background-color: #666;
+    transform: translateY(-1px);
 }
 
 .cell.revealed {
-    background: linear-gradient(145deg, #bbb, #999);
+    background-color: #777;
+    border-color: #555;
     cursor: default;
-    box-shadow: inset 2px 2px 5px #888, inset -2px -2px 5px #fff;
 }
 
 .cell.mine {
-    background: linear-gradient(145deg, #ff4d4d, #cc0000);
-    color: white;
-    box-shadow: inset 2px 2px 5px #990000, inset -2px -2px 5px #ff6666;
+    background-color: #222;
+    border-color: #111;
+    color: #f33;
 }

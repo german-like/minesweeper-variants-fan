@@ -1,17 +1,53 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>拡張マインスイーパー</title>
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="minesweeper.css" />
 </head>
 <body>
-  <h1>拡張マインスイーパー</h1>
-  <div id="controls">
-    <button id="modeBtn">シャベル</button>
-    <span id="status"></span>
-  </div>
-  <div id="board"></div>
-  <script src="script.js"></script>
+  <main class="container">
+    <h1>拡張マインスイーパー</h1>
+
+    <div id="controls" class="controls">
+      <label>
+        プリセット：
+        <select id="preset">
+          <option value="5x5">5×5（20%）</option>
+          <option value="6x6">6×6（20%）</option>
+          <option value="7x7">7×7（20%）</option>
+          <option value="8x8">8×8（20%）</option>
+        </select>
+      </label>
+
+      <label>
+        ルール：
+        <select id="ruleSelect">
+          <option value="normal">通常</option>
+          <option value="amplify">増幅（チェス盤）</option>
+        </select>
+      </label>
+
+      <button id="newBtn">新しく作る</button>
+      <button id="modeBtn">シャベル</button>
+
+      <div class="meta">
+        <span id="status" class="status">準備完了</span>
+        <span class="flags">残りフラグ: <strong id="flagsLeft">0</strong></span>
+      </div>
+    </div>
+
+    <div id="boardWrap">
+      <div id="board" class="board" aria-label="マインスイーパーの盤面"></div>
+    </div>
+
+    <footer class="hint">
+      使い方：左クリックで開く、右クリック（または長押し）で旗。<br>
+      「増幅」はチェス盤の暗いマスの地雷を「2個として」数えます。
+    </footer>
+  </main>
+
+  <script src="minesweeper.js"></script>
 </body>
 </html>

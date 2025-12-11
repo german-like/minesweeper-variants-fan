@@ -1,111 +1,53 @@
-/* =========================
-   ベースデザイン
-========================= */
 body {
-  font-family: 'Segoe UI', sans-serif;
-  background: #555;
-  color: #eee;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding-top: 30px;
-}
-
-/* =========================
-   タイトル
-========================= */
-h1 {
-  font-weight: 700;
-  letter-spacing: 1px;
-  color: #eee;
-  margin-bottom: 20px;
-}
-
-/* =========================
-   ボード
-========================= */
-#board {
-  display: grid;
-  grid-template-columns: repeat(9, 40px);
-  grid-gap: 4px;
-  margin: 20px 0;
-}
-
-/* =========================
-   セル
-========================= */
-.cell {
-  width: 40px;
-  height: 40px;
-  border-radius: 6px;
-  background: #9a9a9a;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.25);
-  cursor: pointer;
+  background: #f5f5f5;
+  font-family: sans-serif;
   text-align: center;
-  line-height: 40px;
+  padding: 20px;
+}
+
+#board {
+  display: inline-grid;
+  grid-template-columns: repeat(10, 32px);
+  gap: 4px;
+  margin-top: 20px;
+}
+
+.cell {
+  width: 32px;
+  height: 32px;
+  border-radius: 4px;
+  background: #ddd;
+  display: flex;
+  justify-content: center;
+  align-items: center;
   font-weight: bold;
+  cursor: pointer;
   user-select: none;
-  transition: 
-    transform 0.15s ease,
-    background 0.2s ease,
-    box-shadow 0.2s ease;
 }
 
-/* ホバー時 */
-.cell:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 3px 6px rgba(0,0,0,0.35);
-}
-
-/* 開いたセル */
-.cell.open {
-  background: #fafafa;
-  box-shadow: inset 0 2px 4px rgba(0,0,0,0.15);
+.cell.revealed {
+  background: #fff;
   cursor: default;
 }
 
-/* 地雷 */
 .cell.mine {
-  background: #c33;
-  color: #fff;
+  background: #ff5c5c;
 }
 
-/* =========================
-   数字（すべて無彩色の濃淡で）
-========================= */
-.cell[data-number="1"] { color: #000; }
-.cell[data-number="2"] { color: #222; }
-.cell[data-number="3"] { color: #444; }
-.cell[data-number="4"] { color: #666; }
-.cell[data-number="5"] { color: #888; }
-.cell[data-number="6"] { color: #aaa; }
-.cell[data-number="7"] { color: #ccc; }
-.cell[data-number="8"] { color: #eee; }
+#controls {
+  margin-bottom: 10px;
+}
 
-/* =========================
-   ボタン
-========================= */
-#modeBtn,
-#reset {
-  padding: 8px 20px;
-  margin: 5px;
-  font-size: 15px;
-  font-weight: bold;
+#modeBtn {
+  padding: 6px 12px;
+  font-size: 14px;
   border: none;
-  border-radius: 6px;
-  background: #222;
-  color: #fff;
+  border-radius: 4px;
+  background: #444;
+  color: white;
   cursor: pointer;
-  transition: 
-    background 0.2s ease,
-    transform 0.15s ease,
-    box-shadow 0.2s ease;
 }
 
-/* ボタンホバー */
-#modeBtn:hover,
-#reset:hover {
-  background: #111;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+#modeBtn:hover {
+  background: #333;
 }

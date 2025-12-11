@@ -1,32 +1,38 @@
 import { generateSolvableBoard } from "./logic_solver.js";
+import { applyBasicLogic } from "./solver_inference/index.js";
 
-const board = generateSolvableBoard(9, 9, 10);
-
-import { applyBasicLogic } from "./solver_inference/index.ts";
-
-const rows = 5;
-const cols = 5;
+const rows = 9;
+const cols = 9;
 const minesCount = 10;
 
-let board = [];
+let board = [];       // UI用ボード
+let logicBoard = [];  // ソルバー用ボード
 let firstClick = true;
 let mode = 'dig'; // 'dig' or 'flag'
 
-// ソルバーステップ
 export function solverStep() {
-    return applyBasicLogic(board, openCell);
+    return applyBasicLogic(logicBoard, openCell);
 }
 
-// ボード作成
+// UIボードを作り直す
 export function createBoard() {
     const boardElement = document.getElementById('board');
     boardElement.innerHTML = '';
-    board = [];
+
     firstClick = true;
+
+    // ★ 論理的に解ける盤面を生成
+    logicBoard = generateSolvableBoard(rows, cols, minesCount);
+
+    // ★ UI用ボードを logicBoard から構築
+    board = [];
 
     for (let r = 0; r < rows; r++) {
         const row = [];
         for (let c = 0; c < cols; c++) {
+
+            const cellData = logicBoard[r][c]; // ← 内部盤面を参照
+
             const cell = document.createElement('div');
             cell.classList.add('cell');
             cell.dataset.row = r;
@@ -36,12 +42,11 @@ export function createBoard() {
             cell.addEventListener('click', () => handleClick(r, c));
             cell.addEventListener('contextmenu', e => e.preventDefault());
 
-            // row / col を必ず保持（ソルバーが使う）
             row.push({
                 element: cell,
-                mine: false,
+                mine: cellData.mine,
+                number: cellData.number,
                 opened: false,
-                number: 0,
                 row: r,
                 col: c
             });
@@ -50,38 +55,7 @@ export function createBoard() {
     }
 }
 
-// 地雷設置（最初のクリック後）
-function placeMines(safeRow, safeCol) {
-    let placed = 0;
-    while (placed < minesCount) {
-        const r = Math.floor(Math.random() * rows);
-        const c = Math.floor(Math.random() * cols);
-        if ((r === safeRow && c === safeCol) || board[r][c].mine) continue;
-        board[r][c].mine = true;
-        placed++;
-    }
-
-    // 数字計算
-    for (let r = 0; r < rows; r++) {
-        for (let c = 0; c < cols; c++) {
-            if (board[r][c].mine) continue;
-            let count = 0;
-
-            for (let dr = -1; dr <= 1; dr++) {
-                for (let dc = -1; dc <= 1; dc++) {
-                    const nr = r + dr;
-                    const nc = c + dc;
-                    if (nr >= 0 && nr < rows && nc >= 0 && nc < cols) {
-                        if (board[nr][nc].mine) count++;
-                    }
-                }
-            }
-            board[r][c].number = count;
-        }
-    }
-}
-
-// クリック処理
+// UI用クリック処理
 function handleClick(r, c) {
     const cell = board[r][c];
 
@@ -92,12 +66,6 @@ function handleClick(r, c) {
                 cell.element.textContent === '🚩' ? '' : '🚩';
         }
         return;
-    }
-
-    // 最初クリックは必ず安全
-    if (firstClick) {
-        placeMines(r, c);
-        firstClick = false;
     }
 
     openCell(r, c);
@@ -160,6 +128,3 @@ document.getElementById('reset').addEventListener('click', createBoard);
 
 // 初期化
 createBoard();
-
-// 手動ソルバーボタン(Locked)
-// document.getElementById('solve').addEventListener('click', solverStep);

@@ -93,26 +93,41 @@ function renderBoard() {
 
 // --- 論理的盤面生成 ---
 function generateLogicalBoard() {
-    const startRow=Math.floor(NUM_ROWS/2);
-    const startCol=Math.floor(NUM_COLS/2);
-    let attempts=0;
-    statusElement.textContent='盤面を生成中です...';
+    const startRow = Math.floor(NUM_ROWS / 2);
+    const startCol = Math.floor(NUM_COLS / 2);
 
-    while(attempts<1000){
-        let tempBoard=initializeBoard(startRow,startCol);
-        if(isBoardSolvable(tempBoard,startRow,startCol)){
-            board=tempBoard;
-            revealCell(startRow,startCol,true);
-            statusElement.textContent=`論理的に解ける盤面を ${attempts+1} 回目で生成しました。`;
-            renderBoard(); return;
+    statusElement.textContent = '盤面を生成中です...';
+
+    let attempts = 0;
+    let startTime = Date.now();
+    const MAX_ATTEMPTS = 1000;
+    const TIMEOUT_MS = 2000; // 2秒で打ち切る
+
+    while (attempts < MAX_ATTEMPTS) {
+        let tempBoard = initializeBoard(startRow, startCol);
+
+        // ソルバー判定 or タイムアウトで盤面を採用
+        if (isBoardSolvable(tempBoard, startRow, startCol) || (Date.now() - startTime > TIMEOUT_MS)) {
+            board = tempBoard;
+            revealCell(startRow, startCol, true);
+            renderBoard();
+
+            if (attempts === 0) {
+                statusElement.textContent = '盤面を生成しました！';
+            } else {
+                statusElement.textContent = `論理盤面を ${attempts + 1} 回目で生成しました（タイムアウト対応）`;
+            }
+            return;
         }
+
         attempts++;
     }
 
-    statusElement.textContent='【警告】完全ロジック盤面が見つかりませんでした。ランダム盤面を生成します。';
-    board=initializeBoard(startRow,startCol);
-    revealCell(startRow,startCol,true);
+    // 万一ここまで来たらランダム盤面を採用
+    board = initializeBoard(startRow, startCol);
+    revealCell(startRow, startCol, true);
     renderBoard();
+    statusElement.textContent = '【警告】論理盤面が見つからなかったためランダム盤面を生成';
 }
 
 // --- 初回生成 ---

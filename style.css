@@ -1,28 +1,44 @@
 #gameBoard {
     display: grid;
-    /* JSでgrid-template-columnsを設定します */
     border: 3px solid #333;
     margin-top: 20px;
+    gap: 3px; /* マス間にスペースを追加して見やすく */
+    background-color: #222; /* グリッド背景を暗くしてコントラストを強調 */
+    padding: 5px;
+    border-radius: 8px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.5); /* 少し立体感 */
 }
+
 .cell {
-    width: 30px;
-    height: 30px;
-    border: 1px solid #aaa;
+    width: 40px;
+    height: 40px;
+    border-radius: 6px;
     display: flex;
     justify-content: center;
     align-items: center;
-    font-size: 18px;
+    font-size: 20px;
     font-weight: bold;
     cursor: pointer;
-    background-color: #ddd;
+    background: linear-gradient(145deg, #e0e0e0, #cacaca);
+    box-shadow: 5px 5px 10px #aaa, -5px -5px 10px #fff; /* ネオモーフィズム風 */
+    transition: all 0.2s ease;
     user-select: none;
 }
+
+.cell:hover:not(.revealed) {
+    transform: translateY(-2px);
+    box-shadow: 3px 3px 8px #888, -3px -3px 8px #fff;
+    background: linear-gradient(145deg, #f0f0f0, #d0d0d0);
+}
+
 .cell.revealed {
-    background-color: #ccc;
+    background: linear-gradient(145deg, #bbb, #999);
     cursor: default;
+    box-shadow: inset 2px 2px 5px #888, inset -2px -2px 5px #fff;
 }
+
 .cell.mine {
-    background-color: red;
+    background: linear-gradient(145deg, #ff4d4d, #cc0000);
     color: white;
+    box-shadow: inset 2px 2px 5px #990000, inset -2px -2px 5px #ff6666;
 }
-/* 数字の色付けは省略 */

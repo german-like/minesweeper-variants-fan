@@ -1,3 +1,10 @@
+import { applyBasicLogic } from "./solver_inference/base.js";
+
+function solverStep() {
+    const changed = applyBasicLogic(board, openCell);
+    return changed;
+}
+
 const rows = 5;
 const cols = 5;
 const minesCount = 10;

@@ -3,40 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <title>マインスイーパー</title>
-<style>
-  body {
-    font-family: sans-serif;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    margin-top: 30px;
-  }
-  #board {
-    display: grid;
-    grid-template-columns: repeat(9, 30px);
-    grid-gap: 2px;
-  }
-  .cell {
-    width: 30px;
-    height: 30px;
-    background-color: #ccc;
-    text-align: center;
-    line-height: 30px;
-    font-weight: bold;
-    cursor: pointer;
-    user-select: none;
-  }
-  .cell.open {
-    background-color: #eee;
-    cursor: default;
-  }
-  .cell.mine {
-    background-color: red;
-  }
-  #modeBtn {
-    margin-bottom: 10px;
-  }
-</style>
+<link style="stylesheet" href="./main.css"></style>
 </head>
 <body>
 

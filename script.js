@@ -36,7 +36,6 @@ async function loadBoards() {
 
         if (line === "") return;
 
-        // メタ情報行
         if (line.startsWith("[") && line.endsWith("]")) {
             meta = line.slice(1, -1).split("/");
 
@@ -54,7 +53,7 @@ async function loadBoards() {
 
 
 // =============================================
-// 新規ゲーム開始（ランダム盤面使用）
+// 新規ゲーム開始
 // =============================================
 async function startNew() {
     statusEl.textContent = "盤面読込中…";
@@ -69,7 +68,7 @@ async function startNew() {
     rows = parseInt(meta[0]);
     cols = parseInt(meta[0]);
     mineCount = parseInt(meta[1]);
-    const ruleCode = meta[4];   // "V" など
+    const ruleCode = meta[4];   // "V" or "A"
 
     ruleSelect.value = ruleCode === "V" ? "normal" : "amplify";
 
@@ -82,7 +81,6 @@ async function startNew() {
     ruleSelect.disabled = false;
     presetSelect.disabled = false;
 
-    // grid の構築
     grid = rawGrid.map((row, r) =>
         row.map((cell, c) => ({
             mine: cell === "1",
@@ -102,7 +100,7 @@ async function startNew() {
 
 
 // =============================================
-// 隣接地雷数の計算（増幅モード対応）
+// 隣接地雷計算（増幅モード対応）
 // =============================================
 function computeAdjacencies() {
     const amplify = ruleSelect.value === "amplify";
@@ -129,7 +127,6 @@ function computeAdjacencies() {
 
                     if (grid[nr][nc].mine) {
                         if (amplify) {
-                            // チェス盤で暗いマスなら2倍
                             const isDark = ((nr + nc) % 2 === 0);
                             count += isDark ? 2 : 1;
                         } else {
@@ -146,7 +143,7 @@ function computeAdjacencies() {
 
 
 // =============================================
-// 盤面描画
+// 描画
 // =============================================
 function renderBoard() {
     boardEl.style.gridTemplateColumns = `repeat(${cols}, 30px)`;
@@ -161,7 +158,6 @@ function renderBoard() {
 
             div.className = "cell";
 
-            // チェス盤（増幅ルール時）
             if (ruleSelect.value === "amplify" && (r + c) % 2 === 0) {
                 div.classList.add("dark");
             }
@@ -181,7 +177,17 @@ function renderBoard() {
                 div.textContent = "⚑";
             }
 
-            div.addEventListener("click", () => onCellClick(r, c));
+            // 左クリック
+            div.addEventListener("click", () => {
+
+                if (shovelMode) {
+                    onCellClick(r, c);   // 掘る
+                } else {
+                    toggleFlag(r, c);   // 旗
+                }
+            });
+
+            // 右クリック
             div.addEventListener("contextmenu", (e) => {
                 e.preventDefault();
                 toggleFlag(r, c);
@@ -199,7 +205,6 @@ function renderBoard() {
 function onCellClick(r, c) {
     if (gameOver) return;
 
-    // ゲーム開始後はルール変更不可
     if (!firstClick) {
         firstClick = true;
         ruleSelect.disabled = true;
@@ -219,7 +224,6 @@ function onCellClick(r, c) {
         return;
     }
 
-    // 自動で広がる
     if (cell.num === 0) {
         openZeroArea(r, c);
     }
@@ -252,10 +256,11 @@ function openZeroArea(r, c) {
 
 
 // =============================================
-// 旗の切り替え
+// 旗
 // =============================================
 function toggleFlag(r, c) {
     if (gameOver) return;
+
     if (!firstClick) {
         firstClick = true;
         ruleSelect.disabled = true;
@@ -281,13 +286,14 @@ function toggleFlag(r, c) {
 
 
 // =============================================
-// 全地雷表示
+// 全地雷を表示
 // =============================================
 function revealAllMines() {
-    for (let r = 0; r < rows; r++)
-        for (let c = 0; c < cols; c++)
-            if (grid[r][c].mine)
-                grid[r][c].revealed = true;
+    grid.forEach(row =>
+        row.forEach(cell => {
+            if (cell.mine) cell.revealed = true;
+        })
+    );
 
     ruleSelect.disabled = false;
     presetSelect.disabled = false;
@@ -313,7 +319,7 @@ function checkWin() {
 
 
 // =============================================
-// モード切り替え（シャベル / 旗）
+// モード切替
 // =============================================
 modeBtn.addEventListener("click", () => {
     shovelMode = !shovelMode;
@@ -325,6 +331,7 @@ modeBtn.addEventListener("click", () => {
 // 新規作成
 // =============================================
 newBtn.addEventListener("click", startNew);
+
 
 // 初期起動
 startNew();

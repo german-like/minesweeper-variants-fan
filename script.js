@@ -53,6 +53,11 @@ function renderBoard(){
       div.className = 'cell';
       div.dataset.r=r;
       div.dataset.c=c;
+      
+      if(ruleSelect.value === 'amplify' && (r + c) % 2 === 0){
+        div.classList.add('dark'); // 濃いマス
+      }
+      
       if(cell.revealed){
         div.classList.add('revealed');
         if(cell.mine){ div.classList.add('mine'); div.textContent='●'; }

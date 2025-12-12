@@ -85,8 +85,7 @@ h1{
   display:grid;
   gap:6px;               /* マスの間隔 */
   justify-content:center;
-  background: transparent;
-  padding:6px;
+  background:#222;
   border-radius:8px;
 }
 
@@ -102,14 +101,13 @@ h1{
   font-weight:700;
   font-size:15px;
   color: var(--ui-foreground);
-  background: #ffffff;   /* 基本は白（未開封でも白ベース） */
-  border: 1px solid var(--ui-border);
+  background: #ddd;   /* 基本は白（未開封でも白ベース） */
   border-radius:6px;
 }
 
 /* チェス盤の暗マス（差は小さめ） */
 .cell.dark{
-  background: #f3f3f3;   /* ほんの少しグレー */
+  background: #bbb;   /* ほんの少しグレー */
 }
 
 /* 開いたマス（見やすく薄グレー） */

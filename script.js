@@ -43,7 +43,7 @@ async function loadBoards() {
 
         // --- 3. メタ行を取得 ---
         const metaLine = lines[lines.length - 1];
-        const meta = metaLine.match(/\[(\d+)\/(\d+)\/([0-9A-Fa-f]{3})\/\/([A-Za-z])\]/);
+        const meta = metaLine.match(/\[(\d+)\/(\d+)\/([0-9A-Fa-f]{3})\/([A-Za-z])\]/);
 
         if (!meta) {
             console.error("メタ行エラー:", metaLine);

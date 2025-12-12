@@ -125,6 +125,8 @@ button:active {
 .board {
   display: grid;
   gap: 4px;
+  justify-content: center;
+  grid-auto-rows: 40px;
 }
 
 .cell {

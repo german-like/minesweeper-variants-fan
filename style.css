@@ -1,162 +1,77 @@
-/* style.css — 白ベースで中央揃え、盤面が潰れないよう余白確保 */
-
-:root{
-  --bg: #ffffff;
-  --ui-border: #d0d0d0;
-  --ui-foreground: #111111;
-  --muted: #666666;
-}
-
-*{box-sizing:border-box}
-
-html,body{
-  height:100%;
-  margin:0;
-  padding:0;
-  background: var(--bg);
-  color: var(--ui-foreground);
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Hiragino Kaku Gothic ProN", "Meiryo", sans-serif;
-}
-
-/* 全体コンテナ（中央寄せ） */
-.container{
-  max-width: 520px;      /* 横詰まり解消のための最大幅 */
-  margin: 28px auto;     /* 上に余白、左右中央 */
-  padding: 14px;
+body {
+  background-color: #f4f4f8;
+  margin: 0;
+  font-family: sans-serif;
   display: flex;
-  flex-direction: column;
+  justify-content: center;
+  padding: 20px;
+}
+
+.container {
+  text-align: center;
+  width: 100%;
+  max-width: 480px;
+}
+
+.controls {
+  margin-bottom: 20px;
+}
+
+#boardWrap {
+  display: flex;
+  justify-content: center;
+  margin-top: 16px;
+}
+
+.board {
+  display: grid;
+  gap: 3px;
+}
+
+.cell {
+  width: 36px;
+  height: 36px;
+  background: #e0e0e8;
+  border-radius: 4px;
+  display: flex;
+  justify-content: center;
   align-items: center;
+  font-weight: bold;
+  cursor: pointer;
+  user-select: none;
 }
 
-/* 見出し */
-h1{
-  margin: 0 0 12px 0;
-  font-size: 20px;
-  font-weight: 700;
-  color: var(--ui-foreground);
-}
-
-/* コントロール群 */
-.controls{
-  width:100%;
-  display:flex;
-  flex-wrap:wrap;
-  gap:8px;
-  align-items:center;
-  justify-content:center;
-  margin-bottom:12px;
-}
-
-.controls label{
-  display:inline-flex;
-  align-items:center;
-  gap:6px;
-  font-size:14px;
-  color:var(--ui-foreground);
-}
-
-.controls select,
-.controls button{
-  padding:6px 10px;
-  border-radius:6px;
-  border:1px solid var(--ui-border);
-  background:#fff;
-  color:var(--ui-foreground);
-  font-size:14px;
-  appearance:none;
-  -webkit-appearance:none;
-}
-
-/* disable 見た目 */
-.controls select:disabled,
-.controls button:disabled{
-  opacity:0.5;
+/* 開いたセル */
+.cell.open {
+  background: #ffffff;
   cursor: default;
 }
 
-/* メタ表示 */
-.meta { display:flex; gap:10px; align-items:center; font-size:13px; color:var(--muted); }
-
-/* 盤面ラップ */
-#boardWrap{ width:100%; display:flex; justify-content:center; margin-top:6px; }
-
-/* 盤面のグリッド（中央寄せ） */
-.board{
-  display:grid;
-  gap:0px;               /* マスの間隔 */
-  justify-content:center;
-  background:#222;
-  border-radius:8px;
-}
-
-/* マスの基礎 */
-.cell{
-  width:36px;
-  height:36px;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  user-select:none;
-  cursor:pointer;
-  font-weight:700;
-  font-size:15px;
-  color: var(--ui-foreground);
-  background: #ddd;   /* 基本は白（未開封でも白ベース） */
-  border-radius:6px;
-}
-
-/* チェス盤の暗マス（差は小さめ） */
-.cell.dark{
-  background: #bbb;   /* ほんの少しグレー */
-}
-
-/* 開いたマス（見やすく薄グレー） */
-.cell.open{
-  background: #fafafa;
-  border-color: #cfcfcf;
-  cursor: default;
-  color: var(--ui-foreground);
-}
-
-/* 地雷（開示時） */
-.cell.mine{
-  background: #000;
-  color: #fff;
-  border-color: #000;
-}
-
-/* 旗（未開封に旗） */
-.cell.flag{
-  background: #e6e6e6;
-  color: #000;
-  position: relative;
-}
-.cell.flag::after{
+/* 旗 */
+.cell.flag::after {
   content: "⚑";
-  font-size:18px;
-  line-height:1;
+  background: #bff;
+  color: #fff;
 }
 
-/* 数字のモノクロ濃淡（開いたマスに付けるクラス num1..num8） */
-.cell.open.num1 { color: #111; }
-.cell.open.num2 { color: #222; }
-.cell.open.num3 { color: #333; }
-.cell.open.num4 { color: #444; }
-.cell.open.num5 { color: #555; }
-.cell.open.num6 { color: #666; }
-.cell.open.num7 { color: #777; }
-.cell.open.num8 { color: #888; }
-
-/* ヘルプテキスト */
-.hint{
-  margin-top:12px;
-  font-size:13px;
-  color:var(--muted);
-  text-align:center;
+.cell.flag.dark::after {
+  content: "⚑";
+  background: #dff;
+  color: #fff;
 }
 
-/* レスポンシブ：小さい画面ではマスを少し縮める */
-@media (max-width:420px){
-  .cell{ width:30px; height:30px; font-size:13px; }
-  .container{ padding:8px; margin:16px auto; }
+/* 地雷 */
+.cell.mine {
+  background: #ff3a3a;
+  color: white;
+}
+
+/* チェス盤モードの濃いマス */
+.cell.dark {
+  background-color: #d0d0df;
+}
+
+/* 開いている黒マス */
+.cell.dark.open {
+  background-color: #fafafa;
 }

@@ -1,9 +1,6 @@
 // ==== 外部 .brd ファイル対応マインスイーパー JS ==== 
 
-const brdFiles = [
-  './brd/board000.brd', 
-  './brd/board001.brd'
-]; // 用意した .brd ファイルのリスト
+const brdFiles = './brd'; // 用意した .brd ファイルのリスト
 
 const boardEl = document.getElementById('board');
 const newBtn = document.getElementById('newBtn');

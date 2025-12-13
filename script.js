@@ -7,7 +7,10 @@ const flagsLeftEl = document.getElementById("flagsLeft");
 const newBtn = document.getElementById("newBtn");
 const modeBtn = document.getElementById("modeBtn");
 const ruleSelect = document.getElementById("ruleSelect");
-const presetSelect = document.getElementById("preset");
+
+const brdFile = [
+    '000.brd'
+];
 
 let grid = [];
 let rows = 0;
@@ -19,78 +22,102 @@ let firstClick = false;
 let shovelMode = true; // true: 掘る, false: 旗モード
 
 // =============================================
-// 新規ゲーム開始
+// .brd ファイルの読み込み
 // =============================================
-function startNew() {
-    rows = cols = parseInt(presetSelect.value);
-    mineCount = Math.floor(rows * cols * 0.2);
+async function loadBoards() {
+    const response = await fetch(brdFile);
+    const text = await response.text();
+
+    const boards = [];
+    let currentBoard = [];
+    let meta = null;
+
+    text.split("\n").forEach(line => {
+        line = line.trim();
+        if (line === "") return;
+
+        if (line.startsWith("[") && line.endsWith("]")) {
+            meta = line.slice(1,-1).split("/");
+            if (currentBoard.length > 0) {
+                boards.push({ grid: currentBoard, meta });
+                currentBoard = [];
+            }
+        } else {
+            currentBoard.push(line.split(""));
+        }
+    });
+
+    return boards;
+}
+
+// =============================================
+// 新規ゲーム開始（ランダム盤面使用）
+// =============================================
+async function startNew() {
+    statusEl.textContent = "盤面読込中…";
+    boardEl.innerHTML = "";
+
+    const boards = await loadBoards();
+    const picked = boards[Math.floor(Math.random() * boards.length)];
+
+    const rawGrid = picked.grid;
+    const meta = picked.meta;
+
+    rows = parseInt(meta[0]);
+    cols = parseInt(meta[0]);
+    mineCount = parseInt(meta[1]);
+    const ruleCode = meta[4];
+
+    ruleSelect.value = ruleCode === "V" ? "normal" : "amplify";
+
     flagsLeft = mineCount;
     flagsLeftEl.textContent = flagsLeft;
+
     gameOver = false;
     firstClick = false;
     ruleSelect.disabled = false;
-    presetSelect.disabled = false;
 
-    // grid 初期化
-    grid = Array.from({length: rows}, (_, r) =>
-        Array.from({length: cols}, (_, c) => ({
-            mine: false,
-            revealed: false,
+    grid = rawGrid.map((row,r) =>
+        row.map((cell,c) => ({
+            mine: cell==="1",
+            revealed: cell==="-" ? true : false,
             flagged: false,
-            num: 0,
-            row: r,
-            col: c
+            num:0,
+            row:r,
+            col:c
         }))
     );
 
-    placeMines();
     computeAdjacencies();
     renderBoard();
     statusEl.textContent = "準備完了";
 }
 
 // =============================================
-// 地雷配置
-// =============================================
-function placeMines() {
-    let placed = 0;
-    while (placed < mineCount) {
-        const r = Math.floor(Math.random() * rows);
-        const c = Math.floor(Math.random() * cols);
-        if (!grid[r][c].mine) {
-            grid[r][c].mine = true;
-            placed++;
-        }
-    }
-}
-
-// =============================================
-// 隣接地雷数計算（V/Aルール対応）
+// 隣接地雷数計算（V/A対応）
 // =============================================
 function computeAdjacencies() {
-    const amplify = ruleSelect.value === "amplify";
+    const amplify = ruleSelect.value==="amplify";
 
-    for (let r=0; r<rows; r++) {
-        for (let c=0; c<cols; c++) {
-            if (grid[r][c].mine) { grid[r][c].num = -1; continue; }
+    for(let r=0;r<rows;r++){
+        for(let c=0;c<cols;c++){
+            if(grid[r][c].mine){ grid[r][c].num=-1; continue; }
 
-            let count = 0;
-            for (let dr=-1; dr<=1; dr++) {
-                for (let dc=-1; dc<=1; dc++) {
-                    if (dr===0 && dc===0) continue;
-                    const nr = r+dr, nc = c+dc;
-                    if (nr<0||nr>=rows||nc<0||nc>=cols) continue;
-                    if (grid[nr][nc].mine) {
-                        if (amplify) {
-                            const isDark = (nr+nc)%2===0;
-                            count += isDark ? 2 : 1;
-                        } else {
-                            count += 1;
-                        }
+            let count=0;
+            for(let dr=-1;dr<=1;dr++){
+                for(let dc=-1;dc<=1;dc++){
+                    if(dr===0 && dc===0) continue;
+                    const nr=r+dr, nc=c+dc;
+                    if(nr<0||nr>=rows||nc<0||nc>=cols) continue;
+                    if(grid[nr][nc].mine){
+                        if(amplify){
+                            const isDark=(nr+nc)%2===0;
+                            count+=isDark?2:1;
+                        } else count+=1;
                     }
                 }
             }
-            grid[r][c].num = count;
+            grid[r][c].num=count;
         }
     }
 }
@@ -98,35 +125,33 @@ function computeAdjacencies() {
 // =============================================
 // 盤面描画
 // =============================================
-function renderBoard() {
-    boardEl.style.gridTemplateColumns = `repeat(${cols}, 30px)`;
-    boardEl.style.gridTemplateRows = `repeat(${rows}, 30px)`;
-    boardEl.innerHTML = "";
+function renderBoard(){
+    boardEl.style.gridTemplateColumns=`repeat(${cols},30px)`;
+    boardEl.style.gridTemplateRows=`repeat(${rows},30px)`;
+    boardEl.innerHTML="";
 
-    for (let r=0; r<rows; r++) {
-        for (let c=0; c<cols; c++) {
-            const cell = grid[r][c];
-            const div = document.createElement("div");
-            div.className = "cell";
+    for(let r=0;r<rows;r++){
+        for(let c=0;c<cols;c++){
+            const cell=grid[r][c];
+            const div=document.createElement("div");
+            div.className="cell";
 
-            if (ruleSelect.value==="amplify" && (r+c)%2===0) div.classList.add("dark");
+            if(ruleSelect.value==="amplify" && (r+c)%2===0) div.classList.add("dark");
 
-            if (cell.revealed) {
+            if(cell.revealed){
                 div.classList.add("revealed");
                 div.classList.remove("dark");
-                if (cell.mine) {
+                if(cell.mine){
                     div.classList.add("mine");
-                    div.textContent = "●";
-                } else if (cell.num>0) {
-                    div.textContent = cell.num;
-                }
-            } else if (cell.flagged) {
+                    div.textContent="●";
+                } else if(cell.num>0) div.textContent=cell.num;
+            } else if(cell.flagged){
                 div.classList.add("flag");
-                div.textContent = "⚑";
+                div.textContent="⚑";
             }
 
-            div.addEventListener("click", ()=>onCellClick(r,c));
-            div.addEventListener("contextmenu", (e)=>{
+            div.addEventListener("click",()=>onCellClick(r,c));
+            div.addEventListener("contextmenu",(e)=>{
                 e.preventDefault();
                 toggleFlag(r,c);
             });
@@ -145,25 +170,25 @@ function onCellClick(r,c){
     if(!firstClick){
         firstClick=true;
         ruleSelect.disabled=true;
-        presetSelect.disabled=true;
     }
 
     const cell=grid[r][c];
     if(cell.revealed || cell.flagged) return;
 
-    cell.revealed=true;
-
-    if(cell.mine){
-        gameOver=true;
-        revealAllMines();
-        statusEl.textContent="ゲームオーバー…";
-        return;
+    if(shovelMode){
+        cell.revealed=true;
+        if(cell.mine){
+            gameOver=true;
+            revealAllMines();
+            statusEl.textContent="ゲームオーバー…";
+            return;
+        }
+        if(cell.num===0) openZeroArea(r,c);
+        checkWin();
+        renderBoard();
+    } else {
+        toggleFlag(r,c);
     }
-
-    if(cell.num===0) openZeroArea(r,c);
-
-    checkWin();
-    renderBoard();
 }
 
 // =============================================
@@ -187,18 +212,10 @@ function openZeroArea(r,c){
 // 旗の切り替え
 // =============================================
 function toggleFlag(r,c){
-    if(gameOver) return;
     const cell=grid[r][c];
     if(cell.revealed) return;
-
-    if(cell.flagged){
-        cell.flagged=false;
-        flagsLeft++;
-    }else{
-        if(flagsLeft<=0) return;
-        cell.flagged=true;
-        flagsLeft--;
-    }
+    if(cell.flagged){ cell.flagged=false; flagsLeft++; }
+    else { if(flagsLeft<=0) return; cell.flagged=true; flagsLeft--; }
     flagsLeftEl.textContent=flagsLeft;
     renderBoard();
 }
@@ -212,13 +229,11 @@ function revealAllMines(){
             if(grid[r][c].mine) grid[r][c].revealed=true;
 
     ruleSelect.disabled=false;
-    presetSelect.disabled=false;
-
     renderBoard();
 }
 
 // =============================================
-// 勝利チェック
+// 勝利判定
 // =============================================
 function checkWin(){
     for(let r=0;r<rows;r++)
@@ -228,7 +243,6 @@ function checkWin(){
     gameOver=true;
     statusEl.textContent="勝利！";
     ruleSelect.disabled=false;
-    presetSelect.disabled=false;
 }
 
 // =============================================
@@ -240,7 +254,7 @@ modeBtn.addEventListener("click",()=>{
 });
 
 // =============================================
-// 新規作成
+// 新規ゲーム
 // =============================================
 newBtn.addEventListener("click",startNew);
 

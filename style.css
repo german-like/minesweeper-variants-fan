@@ -1,98 +1,90 @@
 body {
-    background: #1e1e1e;
-    font-family: "Segoe UI", sans-serif;
-    display: flex;
-    justify-content: center;
-    padding-top: 20px;
-    color: #eee;
+  background: #2c2f36;
+  color: #eee;
+  font-family: "Segoe UI", sans-serif;
+  display: flex;
+  justify-content: center;
+  padding-top: 20px;
 }
 
 .container {
-    text-align: center;
+  text-align: center;
 }
 
 h1 {
-    margin-bottom: 15px;
-    color: #eee;
+  margin-bottom: 15px;
 }
 
 .controls {
-    margin-bottom: 10px;
+  margin-bottom: 10px;
 }
 
 button, select {
-    padding: 6px 10px;
-    margin: 4px;
-    border-radius: 6px;
-    border: 1px solid #666;
-    background: #333;
-    cursor: pointer;
-    font-size: 14px;
-    color: #eee;
+  padding: 6px 12px;
+  margin: 4px;
+  border-radius: 6px;
+  border: 1px solid #555;
+  background: #444;
+  color: #eee;
+  cursor: pointer;
 }
 
-button:hover {
-    background: #555;
-}
-
-.meta {
-    margin-bottom: 10px;
+button:hover, select:hover {
+  background: #555;
 }
 
 #status {
-    font-size: 16px;
-    color: #ccc;
+  margin-left: 10px;
+  font-size: 16px;
 }
 
 .flags {
-    margin-left: 10px;
-    font-weight: bold;
-    color: #ccc;
+  margin-left: 10px;
+  font-weight: bold;
 }
 
 #boardWrap {
-    display: flex;
-    justify-content: center;  /* 横中央 */
-    align-items: center;      /* 縦中央（必要に応じて） */
+  display: flex;
+  justify-content: center;
 }
 
 #board {
-    display: grid;
-    gap: 2px;
-    background: #333;
-    padding: 5px;
-    border-radius: 8px;
-    /* 中央揃えは親の flex で行うので margin:auto は不要 */
+  display: grid;
+  gap: 2px;
+  padding: 5px;
+  border-radius: 8px;
+  background: #444;
 }
+
 .cell {
-    width: 30px;
-    height: 30px;
-    background: #2e2e2e;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    font-weight: bold;
-    border-radius: 4px;
-    user-select: none;
-    font-size: 16px;
-    color: #eee;
+  width: 40px;
+  height: 40px;
+  background: #666;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-weight: bold;
+  border-radius: 4px;
+  user-select: none;
+  font-size: 18px;
+  color: #eee;
 }
 
 .cell.dark {
-    background: #3a3a3a;
+  background: #555; /* チェス盤の暗いマス */
 }
 
 .cell.revealed {
-    background: #555 !important;
-    color: #eee;
-    box-shadow: inset 0 0 3px rgba(0,0,0,0.3);
+  background: #bbb;
+  color: #222;
+  box-shadow: inset 0 0 3px rgba(0,0,0,0.3);
 }
 
 .cell.mine {
-    color: #ff5555;
+  color: #e33;
 }
 
 .cell.flag {
-    background: #444;
-    color: #55aaff;
+  background: #f88;
+  color: #900;
 }

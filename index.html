@@ -2,50 +2,36 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<title>拡張マインスイーパー</title>
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>ノーゲス 5x5 マインスイーパー（増幅対応）</title>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-
 <main class="container">
-    <h1>拡張マインスイーパー</h1>
+  <h1>ノーゲス 5x5 マインスイーパー</h1>
 
-    <div class="controls">
-        <label>
-            プリセット：
-            <select id="preset">
-                <option value="5">5×5（20%）</option>
-                <option value="6">6×6（20%）</option>
-                <option value="7">7×7（20%）</option>
-                <option value="8">8×8（20%）</option>
-            </select>
-        </label>
+  <div class="controls">
+    <label>ルール:
+      <select id="ruleSelect">
+        <option value="normal">通常 (V)</option>
+        <option value="amplify">増幅 (A)</option>
+      </select>
+    </label>
 
-        <label>
-            ルール：
-            <select id="ruleSelect">
-                <option value="normal">バニラ(V)</option>
-                <option value="amplify">増幅(A)</option>
-            </select>
-        </label>
+    <button id="newBtn">新しく作る</button>
+    <button id="modeBtn">シャベル</button>
+    <span id="status" class="status">準備完了</span>
+    <span class="flags">残りフラグ: <strong id="flagsLeft">0</strong></span>
+  </div>
 
-        <button id="newBtn">新規ゲーム</button>
-        <button id="modeBtn">シャベル</button>
-    </div>
+  <div id="boardWrap">
+    <div id="board" class="board"></div>
+  </div>
 
-    <div class="meta">
-        <span id="status">準備完了</span>
-        <span class="flags">残りフラグ: <strong id="flagsLeft">0</strong></span>
-    </div>
-
-    <div id="boardWrap">
-        <div id="board" class="board" aria-label="マインスイーパーの盤面"></div>
-    </div>
-
-    <footer class="hint">
-        使い方：左クリックで開く、右クリックで旗。<br>
-        「増幅(A)」はチェス盤の暗いマスの地雷を2個として数えます。
-    </footer>
+  <footer class="hint">
+    使い方：左クリックで開く、右クリックまたは長押しで旗。<br>
+    「増幅」はチェス盤の暗いマスの地雷を 2 個として数えます。
+  </footer>
 </main>
 
 <script src="script.js"></script>

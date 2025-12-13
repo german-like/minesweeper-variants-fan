@@ -1,35 +1,52 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-    <meta charset="UTF-8">
-    <title>Minesweeper</title>
-    <link rel="stylesheet" href="style.css">
+<meta charset="UTF-8">
+<title>拡張マインスイーパー</title>
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-<div class="center">
-    <h1>Minesweeper</h1>
+<main class="container">
+    <h1>拡張マインスイーパー</h1>
 
     <div class="controls">
-        <select id="boardPreset">
-            <option value="5">5x5</option>
-            <option value="6">6x6</option>
-            <option value="7">7x7</option>
-            <option value="8">8x8</option>
-        </select>
+        <label>
+            プリセット：
+            <select id="preset">
+                <option value="5">5×5（20%）</option>
+                <option value="6">6×6（20%）</option>
+                <option value="7">7×7（20%）</option>
+                <option value="8">8×8（20%）</option>
+            </select>
+        </label>
 
-        <select id="ruleSelect">
-            <option value="V">Vanilla</option>
-            <option value="T">Trio</option>
-            <option value="C">Contrast</option>
-        </select>
+        <label>
+            ルール：
+            <select id="ruleSelect">
+                <option value="normal">バニラ(V)</option>
+                <option value="amplify">増幅(A)</option>
+            </select>
+        </label>
 
-        <button id="modeBtn">掘るモード</button>
-        <button id="newGameBtn">New Game</button>
+        <button id="newBtn">新規ゲーム</button>
+        <button id="modeBtn">シャベル</button>
     </div>
 
-    <div id="board" class="board chess"></div>
-</div>
+    <div class="meta">
+        <span id="status">準備完了</span>
+        <span class="flags">残りフラグ: <strong id="flagsLeft">0</strong></span>
+    </div>
+
+    <div id="boardWrap">
+        <div id="board" class="board" aria-label="マインスイーパーの盤面"></div>
+    </div>
+
+    <footer class="hint">
+        使い方：左クリックで開く、右クリックで旗。<br>
+        「増幅(A)」はチェス盤の暗いマスの地雷を2個として数えます。
+    </footer>
+</main>
 
 <script src="script.js"></script>
 </body>

@@ -1,39 +1,187 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>ノーゲス 5x5 マインスイーパー（増幅対応）</title>
-<link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8" />
+  <title>Minesweeper</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      background:#111;
+      color:#eee;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+    }
+    h1 { margin: 12px; }
+    #board { display:grid; gap:2px; }
+    .cell {
+      width:32px;
+      height:32px;
+      background:#444;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      cursor:pointer;
+      user-select:none;
+      font-weight:bold;
+    }
+    .cell.color { background:#555; }
+    .cell.open { background:#222; cursor:default; }
+    .cell.flag { background:#663; }
+  </style>
 </head>
 <body>
-<main class="container">
-  <h1>ノーゲス 5x5 マインスイーパー</h1>
+  <h1>マインスイーパー</h1>
+  <div id="board"></div>
 
-  <div class="controls">
-    <label>ルール:
-      <select id="ruleSelect">
-        <option value="normal">通常 (V)</option>
-        <option value="amplify">増幅 (A)</option>
-      </select>
-    </label>
+<script>
+const W = 10, H = 10;
+const MODE = 'AMPLIFIED'; // 'NORMAL', 'AMPLIFIED'
+const MINES = 15;
 
-    <button id="newBtn">新しく作る</button>
-    <button id="modeBtn">シャベル</button>
-    <span id="status" class="status">準備完了</span>
-    <span class="flags">残りフラグ: <strong id="flagsLeft">0</strong></span>
-  </div>
+const boardEl = document.getElementById('board');
+boardEl.style.gridTemplateColumns = `repeat(${W}, 32px)`;
 
-  <div id="boardWrap">
-    <div id="board" class="board"></div>
-  </div>
+const cells = [];
+let gameOver = false;
+let firstClick = true;
 
-  <footer class="hint">
-    使い方：左クリックで開く、右クリックまたは長押しで旗。<br>
-    「増幅」はチェス盤の暗いマスの地雷を 2 個として数えます。
-  </footer>
-</main>
+function idx(x,y){ return y*W+x }
+function inBounds(x,y){ return x>=0 && y>=0 && x<W && y<H }
 
-<script src="script.js"></script>
+function neighbors(x,y){
+  const res=[];
+  for(let dy=-1;dy<=1;dy++){
+    for(let dx=-1;dx<=1;dx++){
+      if(dx||dy){
+        const nx=x+dx, ny=y+dy;
+        if(inBounds(nx,ny)) res.push([nx,ny]);
+      }
+    }
+  }
+  return res;
+}
+
+function init(){
+  cells.length = 0;
+  boardEl.innerHTML = '';
+  gameOver = false;
+  firstClick = true;
+
+  for(let y=0;y<H;y++){
+    for(let x=0;x<W;x++){
+      cells.push({
+        x,
+        y,
+        mine:false,
+        open:false,
+        value:0,
+        color: (x + y) % 2 === 0
+      });
+    }
+  }
+
+  render();
+}
+
+function openCell(c){
+  if(gameOver || c.open) return;
+
+  if(firstClick){
+    placeMinesAvoid(c.x, c.y);
+    computeValues();
+    firstClick = false;
+  }
+
+  c.open = true;
+
+  if(c.mine){
+    gameOver = true;
+    alert('ゲームオーバー');
+    revealMines();
+    return;
+  }
+
+  if(c.value === 0){
+    for(const [nx,ny] of neighbors(c.x,c.y)){
+      openCell(cells[idx(nx,ny)]);
+    }
+  }
+
+  checkWin();
+}
+
+function placeMinesAvoid(sx, sy){
+  let placed = 0;
+  while(placed < MINES){
+    const i = Math.floor(Math.random() * cells.length);
+    const c = cells[i];
+    if(c.mine) continue;
+    if(Math.abs(c.x - sx) <= 1 && Math.abs(c.y - sy) <= 1) continue;
+    c.mine = true;
+    placed++;
+  }
+}
+
+function computeValues(){
+  for(const c of cells){
+    let v = 0;
+    for(const [nx,ny] of neighbors(c.x,c.y)){
+      const n = cells[idx(nx,ny)];
+      if(n.mine){
+        if(MODE === 'AMPLIFIED' && n.color) v += 2;
+        else v += 1;
+      }
+    }
+    c.value = v;
+  }
+}
+
+function revealMines(){
+  for(const c of cells){
+    if(c.mine){
+      c.el.textContent = '💣';
+      c.el.classList.add('open');
+    }
+  }
+}
+
+function checkWin(){
+  const unopened = cells.filter(c => !c.open).length;
+  if(unopened === MINES){
+    gameOver = true;
+    alert('クリア！');
+  }
+}
+
+function render(){
+  for(const c of cells){
+    const d = document.createElement('div');
+    d.className = 'cell';
+    if(MODE === 'AMPLIFIED' && c.color) d.classList.add('color');
+    d.oncontextmenu = e => {
+      e.preventDefault();
+      d.classList.toggle('flag');
+    };
+    d.onclick = () => {
+      openCell(c);
+      update();
+    };
+    c.el = d;
+    boardEl.appendChild(d);
+  }
+}
+
+function update(){
+  for(const c of cells){
+    if(c.open){
+      c.el.classList.add('open');
+      c.el.textContent = c.value || '';
+    }
+  }
+}
+
+init();
+</script>
 </body>
 </html>

@@ -4,14 +4,10 @@
 <meta charset="UTF-8" />
 <title>Minesweeper Vanilla</title>
 <style>
-  body {
-    font-family: sans-serif;
-    padding: 20px;
-  }
+  body { font-family: sans-serif; padding: 20px; }
   #board {
     display: grid;
     grid-template-columns: repeat(10, 32px);
-    gap: 0;
   }
   .cell {
     width: 32px;
@@ -33,7 +29,7 @@
 </head>
 <body>
 
-<h1>Minesweeper (Vanilla)</h1>
+<h1>Minesweeper (Vanilla 完成版)</h1>
 <div id="board"></div>
 <button onclick="resetGame()">Reset</button>
 
@@ -50,6 +46,7 @@ const dirs = [
 
 let board = [];
 let gameOver = false;
+let firstClick = true;
 
 function createBoard() {
   board = Array.from({ length: H }, () =>
@@ -60,15 +57,22 @@ function createBoard() {
       isFlagged: false,
     }))
   );
+}
 
+function placeMinesSafe(sx, sy) {
   let placed = 0;
+
+  function forbidden(x, y) {
+    return Math.abs(x - sx) <= 1 && Math.abs(y - sy) <= 1;
+  }
+
   while (placed < MINES) {
     const x = Math.floor(Math.random() * W);
     const y = Math.floor(Math.random() * H);
-    if (!board[y][x].isMine) {
-      board[y][x].isMine = true;
-      placed++;
-    }
+    if (board[y][x].isMine) continue;
+    if (forbidden(x, y)) continue;
+    board[y][x].isMine = true;
+    placed++;
   }
 
   for (let y = 0; y < H; y++) {
@@ -95,6 +99,28 @@ function openCell(x, y) {
   }
 }
 
+function countFlags(x, y) {
+  return dirs.reduce(
+    (sum, [dx, dy]) => sum + (board[y + dy]?.[x + dx]?.isFlagged ? 1 : 0),
+    0
+  );
+}
+
+function openAround(x, y) {
+  for (const [dx, dy] of dirs) {
+    const cell = board[y + dy]?.[x + dx];
+    if (cell && !cell.isOpen && !cell.isFlagged) {
+      if (cell.isMine) {
+        cell.isOpen = true;
+        gameOver = true;
+        alert("Game Over");
+        return;
+      }
+      openCell(x + dx, y + dy);
+    }
+  }
+}
+
 function render() {
   const boardEl = document.getElementById("board");
   boardEl.innerHTML = "";
@@ -112,14 +138,32 @@ function render() {
 
       div.onclick = () => {
         if (gameOver) return;
-        if (cell.isMine) {
-          cell.isOpen = true;
-          gameOver = true;
-          alert("Game Over");
-        } else {
-          openCell(x, y);
+
+        if (firstClick) {
+          placeMinesSafe(x, y);
+          firstClick = false;
         }
-        render();
+
+        // 数字クリック
+        if (cell.isOpen && cell.adjacent > 0) {
+          if (countFlags(x, y) === cell.adjacent) {
+            openAround(x, y);
+          }
+          render();
+          return;
+        }
+
+        // 通常オープン
+        if (!cell.isOpen && !cell.isFlagged) {
+          if (cell.isMine) {
+            cell.isOpen = true;
+            gameOver = true;
+            alert("Game Over");
+          } else {
+            openCell(x, y);
+          }
+          render();
+        }
       };
 
       div.oncontextmenu = (e) => {
@@ -137,6 +181,7 @@ function render() {
 
 function resetGame() {
   gameOver = false;
+  firstClick = true;
   createBoard();
   render();
 }

@@ -1,187 +1,148 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8" />
-  <title>Minesweeper</title>
-  <style>
-    body {
-      font-family: sans-serif;
-      background:#111;
-      color:#eee;
-      display:flex;
-      flex-direction:column;
-      align-items:center;
-    }
-    h1 { margin: 12px; }
-    #board { display:grid; gap:2px; }
-    .cell {
-      width:32px;
-      height:32px;
-      background:#444;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      cursor:pointer;
-      user-select:none;
-      font-weight:bold;
-    }
-    .cell.color { background:#555; }
-    .cell.open { background:#222; cursor:default; }
-    .cell.flag { background:#663; }
-  </style>
+<meta charset="UTF-8" />
+<title>Minesweeper Vanilla</title>
+<style>
+  body {
+    font-family: sans-serif;
+    padding: 20px;
+  }
+  #board {
+    display: grid;
+    grid-template-columns: repeat(10, 32px);
+    gap: 0;
+  }
+  .cell {
+    width: 32px;
+    height: 32px;
+    border: 1px solid #666;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    user-select: none;
+    background: #aaa;
+    font-weight: bold;
+  }
+  .open {
+    background: #ddd;
+    cursor: default;
+  }
+</style>
 </head>
 <body>
-  <h1>マインスイーパー</h1>
-  <div id="board"></div>
+
+<h1>Minesweeper (Vanilla)</h1>
+<div id="board"></div>
+<button onclick="resetGame()">Reset</button>
 
 <script>
-const W = 10, H = 10;
-const MODE = 'AMPLIFIED'; // 'NORMAL', 'AMPLIFIED'
-const MINES = 15;
+const W = 10;
+const H = 10;
+const MINES = 10;
 
-const boardEl = document.getElementById('board');
-boardEl.style.gridTemplateColumns = `repeat(${W}, 32px)`;
+const dirs = [
+  [-1,-1],[0,-1],[1,-1],
+  [-1, 0],      [1, 0],
+  [-1, 1],[0, 1],[1, 1],
+];
 
-const cells = [];
+let board = [];
 let gameOver = false;
-let firstClick = true;
 
-function idx(x,y){ return y*W+x }
-function inBounds(x,y){ return x>=0 && y>=0 && x<W && y<H }
+function createBoard() {
+  board = Array.from({ length: H }, () =>
+    Array.from({ length: W }, () => ({
+      isMine: false,
+      adjacent: 0,
+      isOpen: false,
+      isFlagged: false,
+    }))
+  );
 
-function neighbors(x,y){
-  const res=[];
-  for(let dy=-1;dy<=1;dy++){
-    for(let dx=-1;dx<=1;dx++){
-      if(dx||dy){
-        const nx=x+dx, ny=y+dy;
-        if(inBounds(nx,ny)) res.push([nx,ny]);
-      }
+  let placed = 0;
+  while (placed < MINES) {
+    const x = Math.floor(Math.random() * W);
+    const y = Math.floor(Math.random() * H);
+    if (!board[y][x].isMine) {
+      board[y][x].isMine = true;
+      placed++;
     }
   }
-  return res;
+
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      if (board[y][x].isMine) continue;
+      board[y][x].adjacent = dirs.reduce(
+        (sum, [dx, dy]) => sum + (board[y + dy]?.[x + dx]?.isMine ? 1 : 0),
+        0
+      );
+    }
+  }
 }
 
-function init(){
-  cells.length = 0;
-  boardEl.innerHTML = '';
-  gameOver = false;
-  firstClick = true;
+function openCell(x, y) {
+  const cell = board[y]?.[x];
+  if (!cell || cell.isOpen || cell.isFlagged) return;
 
-  for(let y=0;y<H;y++){
-    for(let x=0;x<W;x++){
-      cells.push({
-        x,
-        y,
-        mine:false,
-        open:false,
-        value:0,
-        color: (x + y) % 2 === 0
-      });
+  cell.isOpen = true;
+
+  if (cell.adjacent === 0 && !cell.isMine) {
+    for (const [dx, dy] of dirs) {
+      openCell(x + dx, y + dy);
     }
   }
+}
 
+function render() {
+  const boardEl = document.getElementById("board");
+  boardEl.innerHTML = "";
+
+  board.forEach((row, y) => {
+    row.forEach((cell, x) => {
+      const div = document.createElement("div");
+      div.className = "cell" + (cell.isOpen ? " open" : "");
+
+      if (cell.isOpen) {
+        div.textContent = cell.isMine ? "💣" : cell.adjacent || "";
+      } else if (cell.isFlagged) {
+        div.textContent = "🚩";
+      }
+
+      div.onclick = () => {
+        if (gameOver) return;
+        if (cell.isMine) {
+          cell.isOpen = true;
+          gameOver = true;
+          alert("Game Over");
+        } else {
+          openCell(x, y);
+        }
+        render();
+      };
+
+      div.oncontextmenu = (e) => {
+        e.preventDefault();
+        if (!cell.isOpen) {
+          cell.isFlagged = !cell.isFlagged;
+          render();
+        }
+      };
+
+      boardEl.appendChild(div);
+    });
+  });
+}
+
+function resetGame() {
+  gameOver = false;
+  createBoard();
   render();
 }
 
-function openCell(c){
-  if(gameOver || c.open) return;
-
-  if(firstClick){
-    placeMinesAvoid(c.x, c.y);
-    computeValues();
-    firstClick = false;
-  }
-
-  c.open = true;
-
-  if(c.mine){
-    gameOver = true;
-    alert('ゲームオーバー');
-    revealMines();
-    return;
-  }
-
-  if(c.value === 0){
-    for(const [nx,ny] of neighbors(c.x,c.y)){
-      openCell(cells[idx(nx,ny)]);
-    }
-  }
-
-  checkWin();
-}
-
-function placeMinesAvoid(sx, sy){
-  let placed = 0;
-  while(placed < MINES){
-    const i = Math.floor(Math.random() * cells.length);
-    const c = cells[i];
-    if(c.mine) continue;
-    if(Math.abs(c.x - sx) <= 1 && Math.abs(c.y - sy) <= 1) continue;
-    c.mine = true;
-    placed++;
-  }
-}
-
-function computeValues(){
-  for(const c of cells){
-    let v = 0;
-    for(const [nx,ny] of neighbors(c.x,c.y)){
-      const n = cells[idx(nx,ny)];
-      if(n.mine){
-        if(MODE === 'AMPLIFIED' && n.color) v += 2;
-        else v += 1;
-      }
-    }
-    c.value = v;
-  }
-}
-
-function revealMines(){
-  for(const c of cells){
-    if(c.mine){
-      c.el.textContent = '💣';
-      c.el.classList.add('open');
-    }
-  }
-}
-
-function checkWin(){
-  const unopened = cells.filter(c => !c.open).length;
-  if(unopened === MINES){
-    gameOver = true;
-    alert('クリア！');
-  }
-}
-
-function render(){
-  for(const c of cells){
-    const d = document.createElement('div');
-    d.className = 'cell';
-    if(MODE === 'AMPLIFIED' && c.color) d.classList.add('color');
-    d.oncontextmenu = e => {
-      e.preventDefault();
-      d.classList.toggle('flag');
-    };
-    d.onclick = () => {
-      openCell(c);
-      update();
-    };
-    c.el = d;
-    boardEl.appendChild(d);
-  }
-}
-
-function update(){
-  for(const c of cells){
-    if(c.open){
-      c.el.classList.add('open');
-      c.el.textContent = c.value || '';
-    }
-  }
-}
-
-init();
+resetGame();
 </script>
+
 </body>
 </html>

@@ -119,10 +119,9 @@ function placeMinesSafe(sx, sy) {
 }
 
 function placeCorridor() {
-function placeCorridor() {
   // スタート位置（上端）
   let x = Math.floor(Math.random() * W);
-  let y = 0;
+  let y = Math.floor(Math.random() * H);
 
   const visited = new Set();
   const key = (x, y) => `${x},${y}`;
@@ -164,11 +163,6 @@ function placeCorridor() {
     });
 
     if (moves.length === 0) break;
-
-    // 下方向をやや優遇（自然な進行）
-    const weighted = moves.flatMap(m =>
-      m[1] === 1 ? [m, m] : [m]
-    );
 
     const [dx, dy] = weighted[Math.floor(Math.random() * weighted.length)];
 

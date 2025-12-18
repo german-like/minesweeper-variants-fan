@@ -37,6 +37,10 @@ body { font-family: system-ui,sans-serif; background:#f5f5f5; padding:20px }
   <button onclick="resetGame()">Reset</button>
 </div><br>
 
+<div id="status">
+  ●　残り地雷数: <span id="mineCount"></span>
+</div>
+<br>
 <div id="board"></div>
 
 <script>
@@ -44,9 +48,9 @@ const dirs8=[[-1,-1],[0,-1],[1,-1],[-1,0],[1,0],[-1,1],[0,1],[1,1]];
 const dirs4=[[0,1],[1,0],[-1,0],[0,-1]];
 
 const DIFFICULTY={
-  easy:{W:8,H:8,mines:8,cmin:6,cmax:10},
-  normal:{W:10,H:10,mines:12,cmin:10,cmax:18},
-  hard:{W:14,H:14,mines:30,cmin:18,cmax:30}
+  easy:{W:5,H:5,mines:10,cmin:6,cmax:12},
+  normal:{W:7,H:7,mines:20,cmin:16,cmax:22},
+  hard:{W:9,H:9,mines:30,cmin:26,cmax:32}
 };
 
 let W=10,H=10,MINES=12,CORRIDOR_MIN=10,CORRIDOR_MAX=18;
@@ -58,8 +62,13 @@ function setDifficulty(n){
   CORRIDOR_MIN=d.cmin;CORRIDOR_MAX=d.cmax;
   resetGame();
 }
-setDifficulty("normal");
+setDifficulty("easy");
 
+function updateMineCount() {
+  const flags = board.flat().filter(c => c.isFlagged).length;
+  document.getElementById("mineCount").textContent = MINES - flags;
+}
+  
 function setRule(r){ rule=r; resetGame(); }
 
 function createBoard(){
@@ -228,6 +237,7 @@ function render(){
     };
     el.appendChild(d);
   }));
+  updateMineCount();
 }
 
 function resetGame(){

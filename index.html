@@ -157,6 +157,11 @@ function render(){
   board.forEach((row,y)=>row.forEach((c,x)=>{
     const d=document.createElement("div");
     d.className="cell";
+    // Aルール：増幅マスをチェス柄表示
+    if (rule === "A" && !c.isOpen && isAmplified(x, y)) {
+      d.style.background = "#bdbdbd";
+    }
+
     if(c.isOpen){
       d.classList.add("open");
       if(c.isMine){d.textContent="●";d.classList.add("mine");}

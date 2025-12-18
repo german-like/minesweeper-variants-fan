@@ -65,22 +65,28 @@ function placeMinesSafe(sx,sy){
   calculateNumbersAmplified();
 }
 
-function placeCorridor(sx,sy){
-  let x=sx,y=sy;
-  const visited=new Set();
-  const key=(x,y)=>`${x},${y}`;
+function placeCorridor(sx, sy){
+  const startMoves = dirs4
+    .map(([dx,dy])=>[sx+dx, sy+dy])
+    .filter(([x,y])=>x>=0&&y>=0&&x<W&&y<H);
+
+  // 初手隣接からランダムに開始
+  let [x, y] = startMoves[Math.floor(Math.random()*startMoves.length)];
+
+  const visited = new Set();
+  const key = (x,y)=>`${x},${y}`;
 
   function neighbors(nx,ny){
     return dirs4.filter(([dx,dy])=>board[ny+dy]?.[nx+dx]?.isMine).length;
   }
 
-  board[y][x].isMine=true;
+  board[y][x].isMine = true;
   visited.add(key(x,y));
 
-  let safety=0;
-  while(safety++<2000){
-    const moves=dirs4.filter(([dx,dy])=>{
-      const nx=x+dx,ny=y+dy;
+  let safety = 0;
+  while(safety++ < 2000){
+    const moves = dirs4.filter(([dx,dy])=>{
+      const nx=x+dx, ny=y+dy;
       if(nx<0||ny<0||nx>=W||ny>=H) return false;
       if(visited.has(key(nx,ny))) return false;
       if(neighbors(nx,ny)>1) return false;
@@ -90,11 +96,11 @@ function placeCorridor(sx,sy){
 
     if(!moves.length) break;
 
-    const weighted=moves.flatMap(m=>m[1]===1?[m,m]:[m]);
-    const [dx,dy]=weighted[Math.floor(Math.random()*weighted.length)];
+    const weighted = moves.flatMap(m=>m[1]===1?[m,m]:[m]);
+    const [dx,dy] = weighted[Math.floor(Math.random()*weighted.length)];
     x+=dx; y+=dy;
 
-    board[y][x].isMine=true;
+    board[y][x].isMine = true;
     visited.add(key(x,y));
   }
 }

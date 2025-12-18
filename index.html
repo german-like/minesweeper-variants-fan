@@ -151,6 +151,28 @@ function openCell(x,y){
     dirs8.forEach(([dx,dy])=>openCell(x+dx,y+dy));
 }
 
+function countFlags(x, y) {
+  return dirs8.reduce(
+    (s, [dx, dy]) => s + (board[y + dy]?.[x + dx]?.isFlagged ? 1 : 0),
+    0
+  );
+}
+
+function openAround(x, y) {
+  for (const [dx, dy] of dirs8) {
+    const c = board[y + dy]?.[x + dx];
+    if (c && !c.isOpen && !c.isFlagged) {
+      if (c.isMine) {
+        c.isOpen = true;
+        gameOver = true;
+        revealAllMines();
+        return;
+      }
+      openCell(x + dx, y + dy);
+    }
+  }
+}
+
 function render(){
   const el=document.getElementById("board");
   el.innerHTML="";

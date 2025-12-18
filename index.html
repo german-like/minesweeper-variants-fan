@@ -47,7 +47,7 @@ function isAmplified(x,y){ return (x+y)%2===0; }
 
 function placeMinesSafe(sx,sy){
   if(rule==="C"){
-    placeCorridor(sx,sy);
+    placeCorridorSafe(sx, sy);
     calculateNumbersNormal();
     return;
   }
@@ -65,34 +65,41 @@ function placeMinesSafe(sx,sy){
   calculateNumbersAmplified();
 }
 
-function placeCorridor(){
-  // --- 頭・胴体・足をランダム生成 ---
+function placeCorridorSafe(sx, sy) {
+  const forbidden = (x, y) =>
+    Math.abs(x - sx) <= 1 && Math.abs(y - sy) <= 1;
+
   let cx, cy, dx, dy;
 
+  // 頭・胴体・足がすべて安全域外になるまで探す
   while (true) {
     cx = Math.floor(Math.random() * W);
     cy = Math.floor(Math.random() * H);
     [dx, dy] = dirs4[Math.floor(Math.random() * dirs4.length)];
 
-    const headX = cx + dx;
-    const headY = cy + dy;
-    const footX = cx - dx;
-    const footY = cy - dy;
+    const head = [cx + dx, cy + dy];
+    const foot = [cx - dx, cy - dy];
 
     if (
-      headX >= 0 && headX < W && headY >= 0 && headY < H &&
-      footX >= 0 && footX < W && footY >= 0 && footY < H
-    ) {
-      break;
-    }
+      head[0] < 0 || head[0] >= W || head[1] < 0 || head[1] >= H ||
+      foot[0] < 0 || foot[0] >= W || foot[1] < 0 || foot[1] >= H
+    ) continue;
+
+    if (
+      forbidden(cx, cy) ||
+      forbidden(head[0], head[1]) ||
+      forbidden(foot[0], foot[1])
+    ) continue;
+
+    break;
   }
 
   const visited = new Set();
-  const key = (x,y)=>`${x},${y}`;
+  const key = (x, y) => `${x},${y}`;
 
-  function mark(x,y){
+  function mark(x, y) {
     board[y][x].isMine = true;
-    visited.add(key(x,y));
+    visited.add(key(x, y));
   }
 
   // 頭・胴体・足
@@ -112,22 +119,19 @@ function placeCorridor(){
   let safety = 0;
   while (safety++ < 2000) {
     const moves = dirs4.filter(([mx, my]) => {
-      const nx = x + mx;
-      const ny = y + my;
+      const nx = x + mx, ny = y + my;
       if (nx < 0 || ny < 0 || nx >= W || ny >= H) return false;
       if (visited.has(key(nx, ny))) return false;
       if (neighbors(nx, ny) > 1) return false;
       if (neighbors(x, y) >= 2) return false;
+      if (forbidden(nx, ny)) return false;
       return true;
     });
 
     if (!moves.length) break;
 
-    const weighted = moves.flatMap(m => m[1] === dy ? [m, m] : [m]);
-    const [mx, my] = weighted[Math.floor(Math.random() * weighted.length)];
-
-    x += mx;
-    y += my;
+    const [mx, my] = moves[Math.floor(Math.random() * moves.length)];
+    x += mx; y += my;
     mark(x, y);
   }
 }

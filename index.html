@@ -119,53 +119,55 @@ function placeMinesSafe(sx, sy) {
 }
 
 function placeCorridor() {
-  // 開始点（上端）
+function placeCorridor() {
+  // スタート位置（上端）
   let x = Math.floor(Math.random() * W);
   let y = 0;
 
   const visited = new Set();
   const key = (x, y) => `${x},${y}`;
 
+  const dirs = [
+    [0, 1],  // 下
+    [1, 0],  // 右
+    [-1, 0], // 左
+    [0, -1]  // 上
+  ];
+
+  function countNeighbors(nx, ny) {
+    return dirs.filter(([dx, dy]) =>
+      board[ny + dy]?.[nx + dx]?.isMine
+    ).length;
+  }
+
   board[y][x].isMine = true;
   visited.add(key(x, y));
 
   let safety = 0;
 
-  while (y < H - 1 && safety < 2000) {
-    safety++;
-
-    // 移動候補（8方向）
-    let moves = [
-      [-1,-1],[0,-1],[1,-1],
-      [-1, 0],        [1, 0],
-      [-1, 1],[0, 1],[1, 1],
-    ].filter(([dx, dy]) => {
+  while (safety++ < 2000) {
+    // 移動候補
+    const moves = dirs.filter(([dx, dy]) => {
       const nx = x + dx;
       const ny = y + dy;
 
       if (nx < 0 || nx >= W || ny < 0 || ny >= H) return false;
       if (visited.has(key(nx, ny))) return false;
 
-      // 四近傍で自己接触禁止
-      const touches4 = [
-        [0,1],[1,0],[-1,0],[0,-1]
-      ].some(([fx, fy]) =>
-        board[ny + fy]?.[nx + fx]?.isMine
-      );
+      // 新セルが「2以上」接続しない
+      if (countNeighbors(nx, ny) > 1) return false;
 
-      return !touches4;
+      // 既存セル側も次数2を超えない
+      if (countNeighbors(x, y) >= 2) return false;
+
+      return true;
     });
 
-    // 詰み対策：下方向のみ許可
-    if (moves.length === 0) {
-      const ny = y + 1;
-      if (ny >= H) break;
-      moves = [[0, 1]];
-    }
+    if (moves.length === 0) break;
 
-    // 下方向を優遇（到達保証）
+    // 下方向をやや優遇（自然な進行）
     const weighted = moves.flatMap(m =>
-      m[1] > 0 ? [m, m, m] : [m]
+      m[1] === 1 ? [m, m] : [m]
     );
 
     const [dx, dy] = weighted[Math.floor(Math.random() * weighted.length)];

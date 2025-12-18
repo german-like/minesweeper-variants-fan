@@ -162,11 +162,27 @@ function countFlags(x,y){
   return dirs8.reduce((s,[dx,dy])=>s+(board[y+dy]?.[x+dx]?.isFlagged?1:0),0);
 }
 
+function revealAllMines() {
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      if (board[y][x].isMine) {
+        board[y][x].isOpen = true;
+      }
+    }
+  }
+}
+
 function openAround(x,y){
   for(const [dx,dy] of dirs8){
     const c=board[y+dy]?.[x+dx];
     if(c&&!c.isOpen&&!c.isFlagged){
-      if(c.isMine){c.isOpen=true;gameOver=true;alert("Game Over");return;}
+      if (c.isMine) {
+        revealAllMines();
+        gameOver = true;
+        render();
+        return;
+      }
+
       openCell(x+dx,y+dy);
     }
   }
@@ -182,10 +198,10 @@ function render(){
 
     if(c.isOpen){
       d.classList.add("open");
-      if(c.isMine){d.textContent="💣";d.classList.add("mine");}
+      if(c.isMine){d.textContent="●";d.classList.add("mine");}
       else if(c.adjacent>0){d.textContent=c.adjacent;d.classList.add("n"+Math.min(c.adjacent,8));}
     }else if(c.isFlagged){
-      d.textContent="🚩";d.classList.add("flag");
+      d.textContent="⚑";d.classList.add("flag");
     }
 
     d.onclick=()=>{
@@ -193,7 +209,11 @@ function render(){
       if(firstClick){placeMinesSafe(x,y);firstClick=false;}
       if(c.isOpen&&c.adjacent>0&&countFlags(x,y)===c.adjacent) openAround(x,y);
       else if(!c.isOpen&&!c.isFlagged){
-        if(c.isMine){c.isOpen=true;gameOver=true;alert("Game Over");}
+        if (c.isMine) {
+          revealAllMines();
+          gameOver = true;
+          render();
+        }
         else openCell(x,y);
       }
       render();

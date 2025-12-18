@@ -169,13 +169,38 @@ function render(){
     }else if(c.isFlagged){
       d.textContent="⚑";d.classList.add("flag");
     }
-    d.onclick=()=>{
-      if(gameOver)return;
-      if(firstClick){placeMinesSafe(x,y);firstClick=false;}
-      if(c.isMine){
-        revealAllMines(); gameOver=true; render(); alert("Game Over");
-      }else{openCell(x,y);render();}
-    };
+    d.onclick = () => {
+  if (gameOver) return;
+
+  // 初回クリック：安全配置
+  if (firstClick) {
+    placeMinesSafe(x, y);
+    firstClick = false;
+  }
+
+  // ★ 数字クリック（chord）
+  if (c.isOpen && c.adjacent > 0) {
+    if (countFlags(x, y) === c.adjacent) {
+      openAround(x, y);
+    }
+    render();
+    return;
+  }
+
+  // 通常クリック
+  if (!c.isOpen && !c.isFlagged) {
+    if (c.isMine) {
+      c.isOpen = true;
+      gameOver = true;
+      revealAllMines();
+      alert("Game Over");
+    } else {
+      openCell(x, y);
+    }
+    render();
+  }
+};
+
     d.oncontextmenu=e=>{
       e.preventDefault();
       if(!c.isOpen){c.isFlagged=!c.isFlagged;render();}

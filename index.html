@@ -4,39 +4,14 @@
 <meta charset="UTF-8" />
 <title>Extended Minesweeper</title>
 <style>
-  body {
-    font-family: system-ui, sans-serif;
-    padding: 20px;
-    background: #f5f5f5;
-  }
-  #board {
-    display: grid;
-    grid-template-columns: repeat(10, 32px);
-    gap: 2px;
-    background: #999;
-    padding: 4px;
-    width: fit-content;
-  }
-  .cell {
-    width: 32px;
-    height: 32px;
-    background: #cfcfcf;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    user-select: none;
-    font-weight: 700;
-    border-radius: 4px;
-  }
-  .cell:hover { filter: brightness(0.95); }
-  .cell.open { background: #fff; cursor: default; }
-  .cell.flag { color: #d00; }
-  .cell.mine { background: #ffdddd; }
-
-  .n1 { color:#1976d2 } .n2 { color:#388e3c } .n3 { color:#d32f2f }
-  .n4 { color:#7b1fa2 } .n5 { color:#f57c00 } .n6 { color:#00838f }
-  .n7 { color:#424242 } .n8 { color:#000 }
+  body { font-family: system-ui, sans-serif; padding:20px; background:#f5f5f5 }
+  #board { display:grid; grid-template-columns:repeat(10,32px); gap:2px; background:#999; padding:4px; width:fit-content }
+  .cell { width:32px; height:32px; background:#cfcfcf; display:flex; align-items:center; justify-content:center; cursor:pointer; user-select:none; font-weight:700; border-radius:4px }
+  .cell.open { background:#fff; cursor:default }
+  .cell.flag { color:#d00 }
+  .cell.mine { background:#ffdddd }
+  .n1{color:#1976d2}.n2{color:#388e3c}.n3{color:#d32f2f}.n4{color:#7b1fa2}
+  .n5{color:#f57c00}.n6{color:#00838f}.n7{color:#424242}.n8{color:#000}
 </style>
 </head>
 <body>
@@ -50,200 +25,157 @@
   <button onclick="resetGame()">Reset</button>
 </div>
 
-<br/>
+<br>
 <div id="board"></div>
 
 <script>
-const W = 10, H = 10, MINES = 10;
-const dirs = [
-  [-1,-1],[0,-1],[1,-1],
-  [-1, 0],      [1, 0],
-  [-1, 1],[0, 1],[1, 1],
-];
+const W=10,H=10,MINES=10;
+const dirs8=[[-1,-1],[0,-1],[1,-1],[-1,0],[1,0],[-1,1],[0,1],[1,1]];
+const dirs4=[[0,1],[1,0],[-1,0],[0,-1]];
 
-let board = [];
-let gameOver = false;
-let firstClick = true;
-let rule = "V"; // V / A / C
+let board=[],gameOver=false,firstClick=true,rule="V";
 
-function setRule(r) {
-  rule = r;
-  resetGame();
+function setRule(r){ rule=r; resetGame(); }
+
+function createBoard(){
+  board=Array.from({length:H},()=>Array.from({length:W},()=>({
+    isMine:false,adjacent:0,isOpen:false,isFlagged:false
+  })));
 }
 
-function createBoard() {
-  board = Array.from({ length: H }, () =>
-    Array.from({ length: W }, () => ({
-      isMine: false,
-      adjacent: 0,
-      isOpen: false,
-      isFlagged: false,
-    }))
-  );
-}
+function isAmplified(x,y){ return (x+y)%2===0; }
 
-function isAmplified(x, y) {
-  return (x + y) % 2 === 0;
-}
-
-function placeMinesSafe(sx, sy) {
-  if (rule === "C") {
-    placeCorridor();
+function placeMinesSafe(sx,sy){
+  if(rule==="C"){
+    placeCorridor(sx,sy);
     calculateNumbersNormal();
     return;
   }
 
-  let placed = 0;
-  const forbidden = (x, y) =>
-    Math.abs(x - sx) <= 1 && Math.abs(y - sy) <= 1;
+  let placed=0;
+  const forbidden=(x,y)=>Math.abs(x-sx)<=1&&Math.abs(y-sy)<=1;
 
-  while (placed < MINES) {
-    const x = Math.floor(Math.random() * W);
-    const y = Math.floor(Math.random() * H);
-    if (board[y][x].isMine || forbidden(x, y)) continue;
-    board[y][x].isMine = true;
-    placed++;
+  while(placed<MINES){
+    const x=Math.floor(Math.random()*W);
+    const y=Math.floor(Math.random()*H);
+    if(board[y][x].isMine||forbidden(x,y))continue;
+    board[y][x].isMine=true; placed++;
   }
 
-  for (let y = 0; y < H; y++) {
-    for (let x = 0; x < W; x++) {
-      if (board[y][x].isMine) continue;
-      board[y][x].adjacent = dirs.reduce((sum,[dx,dy])=>{
-        const n = board[y+dy]?.[x+dx];
-        if (!n || !n.isMine) return sum;
-        if (rule === "A" && isAmplified(x+dx, y+dy)) return sum+2;
-        return sum+1;
-      },0);
-    }
-  }
+  calculateNumbersAmplified();
 }
 
-function placeCorridor() {
-  // スタート位置（上端）
-  let x = Math.floor(Math.random() * W);
-  let y = Math.floor(Math.random() * H);
+function placeCorridor(sx,sy){
+  let x=sx,y=sy;
+  const visited=new Set();
+  const key=(x,y)=>`${x},${y}`;
 
-  const visited = new Set();
-  const key = (x, y) => `${x},${y}`;
-
-  const dirs = [
-    [0, 1],  // 下
-    [1, 0],  // 右
-    [-1, 0], // 左
-    [0, -1]  // 上
-  ];
-
-  function countNeighbors(nx, ny) {
-    return dirs.filter(([dx, dy]) =>
-      board[ny + dy]?.[nx + dx]?.isMine
-    ).length;
+  function neighbors(nx,ny){
+    return dirs4.filter(([dx,dy])=>board[ny+dy]?.[nx+dx]?.isMine).length;
   }
 
-  board[y][x].isMine = true;
-  visited.add(key(x, y));
+  board[y][x].isMine=true;
+  visited.add(key(x,y));
 
-  let safety = 0;
-
-  while (safety++ < 2000) {
-    // 移動候補
-    const moves = dirs.filter(([dx, dy]) => {
-      const nx = x + dx;
-      const ny = y + dy;
-
-      if (nx < 0 || nx >= W || ny < 0 || ny >= H) return false;
-      if (visited.has(key(nx, ny))) return false;
-
-      // 新セルが「2以上」接続しない
-      if (countNeighbors(nx, ny) > 1) return false;
-
-      // 既存セル側も次数2を超えない
-      if (countNeighbors(x, y) >= 2) return false;
-
+  let safety=0;
+  while(safety++<2000){
+    const moves=dirs4.filter(([dx,dy])=>{
+      const nx=x+dx,ny=y+dy;
+      if(nx<0||ny<0||nx>=W||ny>=H) return false;
+      if(visited.has(key(nx,ny))) return false;
+      if(neighbors(nx,ny)>1) return false;
+      if(neighbors(x,y)>=2) return false;
       return true;
     });
 
-    if (moves.length === 0) break;
+    if(!moves.length) break;
 
-    const [dx, dy] = weighted[Math.floor(Math.random() * weighted.length)];
+    const weighted=moves.flatMap(m=>m[1]===1?[m,m]:[m]);
+    const [dx,dy]=weighted[Math.floor(Math.random()*weighted.length)];
+    x+=dx; y+=dy;
 
-    x += dx;
-    y += dy;
-
-    board[y][x].isMine = true;
-    visited.add(key(x, y));
+    board[y][x].isMine=true;
+    visited.add(key(x,y));
   }
 }
 
-function calculateNumbersNormal() {
-  for (let y=0;y<H;y++) for (let x=0;x<W;x++) {
-    if (board[y][x].isMine) continue;
-    board[y][x].adjacent = dirs.reduce(
-      (s,[dx,dy])=>s+(board[y+dy]?.[x+dx]?.isMine?1:0),0
-    );
+function calculateNumbersNormal(){
+  for(let y=0;y<H;y++)for(let x=0;x<W;x++){
+    if(board[y][x].isMine)continue;
+    board[y][x].adjacent=dirs8.reduce((s,[dx,dy])=>s+(board[y+dy]?.[x+dx]?.isMine?1:0),0);
   }
 }
 
-function openCell(x,y) {
-  const c = board[y]?.[x];
-  if (!c || c.isOpen || c.isFlagged) return;
-  c.isOpen = true;
-  if (c.adjacent===0 && !c.isMine)
-    dirs.forEach(([dx,dy])=>openCell(x+dx,y+dy));
+function calculateNumbersAmplified(){
+  for(let y=0;y<H;y++)for(let x=0;x<W;x++){
+    if(board[y][x].isMine)continue;
+    board[y][x].adjacent=dirs8.reduce((s,[dx,dy])=>{
+      const n=board[y+dy]?.[x+dx];
+      if(!n||!n.isMine) return s;
+      return s+(rule==="A"&&isAmplified(x+dx,y+dy)?2:1);
+    },0);
+  }
 }
 
-function countFlags(x,y) {
-  return dirs.reduce(
-    (s,[dx,dy])=>s+(board[y+dy]?.[x+dx]?.isFlagged?1:0),0
-  );
+function openCell(x,y){
+  const c=board[y]?.[x];
+  if(!c||c.isOpen||c.isFlagged) return;
+  c.isOpen=true;
+  if(c.adjacent===0&&!c.isMine)
+    dirs8.forEach(([dx,dy])=>openCell(x+dx,y+dy));
 }
 
-function openAround(x,y) {
-  for (const [dx,dy] of dirs) {
-    const c = board[y+dy]?.[x+dx];
-    if (c && !c.isOpen && !c.isFlagged) {
-      if (c.isMine) { c.isOpen=true; gameOver=true; alert("Game Over"); return; }
+function countFlags(x,y){
+  return dirs8.reduce((s,[dx,dy])=>s+(board[y+dy]?.[x+dx]?.isFlagged?1:0),0);
+}
+
+function openAround(x,y){
+  for(const [dx,dy] of dirs8){
+    const c=board[y+dy]?.[x+dx];
+    if(c&&!c.isOpen&&!c.isFlagged){
+      if(c.isMine){c.isOpen=true;gameOver=true;alert("Game Over");return;}
       openCell(x+dx,y+dy);
     }
   }
 }
 
-function render() {
-  const el = document.getElementById("board");
-  el.innerHTML = "";
+function render(){
+  const el=document.getElementById("board");
+  el.innerHTML="";
   board.forEach((row,y)=>row.forEach((c,x)=>{
     const d=document.createElement("div");
     d.className="cell";
-    if (rule==="A"&&!c.isOpen&&isAmplified(x,y)) d.style.background="#bdbdbd";
-    if (c.isOpen) {
+    if(rule==="A"&&!c.isOpen&&isAmplified(x,y)) d.style.background="#bdbdbd";
+
+    if(c.isOpen){
       d.classList.add("open");
-      if (c.isMine) { d.textContent="💣"; d.classList.add("mine"); }
-      else if (c.adjacent>0) { d.textContent=c.adjacent; d.classList.add("n"+Math.min(c.adjacent,8)); }
-    } else if (c.isFlagged) {
-      d.textContent="🚩"; d.classList.add("flag");
+      if(c.isMine){d.textContent="💣";d.classList.add("mine");}
+      else if(c.adjacent>0){d.textContent=c.adjacent;d.classList.add("n"+Math.min(c.adjacent,8));}
+    }else if(c.isFlagged){
+      d.textContent="🚩";d.classList.add("flag");
     }
 
     d.onclick=()=>{
-      if (gameOver) return;
-      if (firstClick) { placeMinesSafe(x,y); firstClick=false; }
-      if (c.isOpen && c.adjacent>0) {
-        if (countFlags(x,y)===c.adjacent) openAround(x,y);
-        render(); return;
-      }
-      if (!c.isOpen && !c.isFlagged) {
-        if (c.isMine) { c.isOpen=true; gameOver=true; alert("Game Over"); }
+      if(gameOver) return;
+      if(firstClick){placeMinesSafe(x,y);firstClick=false;}
+      if(c.isOpen&&c.adjacent>0&&countFlags(x,y)===c.adjacent) openAround(x,y);
+      else if(!c.isOpen&&!c.isFlagged){
+        if(c.isMine){c.isOpen=true;gameOver=true;alert("Game Over");}
         else openCell(x,y);
-        render();
       }
+      render();
     };
+
     d.oncontextmenu=e=>{
       e.preventDefault();
-      if (!c.isOpen) { c.isFlagged=!c.isFlagged; render(); }
+      if(!c.isOpen){c.isFlagged=!c.isFlagged;render();}
     };
+
     el.appendChild(d);
   }));
 }
 
-function resetGame() {
+function resetGame(){
   gameOver=false; firstClick=true;
   createBoard(); render();
 }

@@ -65,43 +65,70 @@ function placeMinesSafe(sx,sy){
   calculateNumbersAmplified();
 }
 
-function placeCorridor(sx, sy){
-  const startMoves = dirs4
-    .map(([dx,dy])=>[sx+dx, sy+dy])
-    .filter(([x,y])=>x>=0&&y>=0&&x<W&&y<H);
+function placeCorridor(){
+  // --- 頭・胴体・足をランダム生成 ---
+  let cx, cy, dx, dy;
 
-  // 初手隣接からランダムに開始
-  let [x, y] = startMoves[Math.floor(Math.random()*startMoves.length)];
+  while (true) {
+    cx = Math.floor(Math.random() * W);
+    cy = Math.floor(Math.random() * H);
+    [dx, dy] = dirs4[Math.floor(Math.random() * dirs4.length)];
+
+    const headX = cx + dx;
+    const headY = cy + dy;
+    const footX = cx - dx;
+    const footY = cy - dy;
+
+    if (
+      headX >= 0 && headX < W && headY >= 0 && headY < H &&
+      footX >= 0 && footX < W && footY >= 0 && footY < H
+    ) {
+      break;
+    }
+  }
 
   const visited = new Set();
   const key = (x,y)=>`${x},${y}`;
 
-  function neighbors(nx,ny){
-    return dirs4.filter(([dx,dy])=>board[ny+dy]?.[nx+dx]?.isMine).length;
+  function mark(x,y){
+    board[y][x].isMine = true;
+    visited.add(key(x,y));
   }
 
-  board[y][x].isMine = true;
-  visited.add(key(x,y));
+  // 頭・胴体・足
+  mark(cx, cy);
+  mark(cx + dx, cy + dy);
+  mark(cx - dx, cy - dy);
+
+  let x = cx + dx;
+  let y = cy + dy;
+
+  function neighbors(nx, ny) {
+    return dirs4.filter(([dx, dy]) =>
+      board[ny + dy]?.[nx + dx]?.isMine
+    ).length;
+  }
 
   let safety = 0;
-  while(safety++ < 2000){
-    const moves = dirs4.filter(([dx,dy])=>{
-      const nx=x+dx, ny=y+dy;
-      if(nx<0||ny<0||nx>=W||ny>=H) return false;
-      if(visited.has(key(nx,ny))) return false;
-      if(neighbors(nx,ny)>1) return false;
-      if(neighbors(x,y)>=2) return false;
+  while (safety++ < 2000) {
+    const moves = dirs4.filter(([mx, my]) => {
+      const nx = x + mx;
+      const ny = y + my;
+      if (nx < 0 || ny < 0 || nx >= W || ny >= H) return false;
+      if (visited.has(key(nx, ny))) return false;
+      if (neighbors(nx, ny) > 1) return false;
+      if (neighbors(x, y) >= 2) return false;
       return true;
     });
 
-    if(!moves.length) break;
+    if (!moves.length) break;
 
-    const weighted = moves.flatMap(m=>m[1]===1?[m,m]:[m]);
-    const [dx,dy] = weighted[Math.floor(Math.random()*weighted.length)];
-    x+=dx; y+=dy;
+    const weighted = moves.flatMap(m => m[1] === dy ? [m, m] : [m]);
+    const [mx, my] = weighted[Math.floor(Math.random() * weighted.length)];
 
-    board[y][x].isMine = true;
-    visited.add(key(x,y));
+    x += mx;
+    y += my;
+    mark(x, y);
   }
 }
 

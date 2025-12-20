@@ -1,7 +1,12 @@
-fetch("./map/board.map").then(r=>r.text()).then(t=>{
-   parseBoardText(t);
-   render();
-});
+/* =========================
+   Constants
+   ========================= */
+
+const dirs8 = [
+  [-1,-1],[0,-1],[1,-1],
+  [-1, 0],      [1, 0],
+  [-1, 1],[0, 1],[1, 1],
+];
 
 /* =========================
    Utilities
@@ -10,6 +15,7 @@ fetch("./map/board.map").then(r=>r.text()).then(t=>{
 function parseBoard(text) {
   const lines = text.trim().split("\n");
   const meta = lines.pop();
+
   const [, size, hex, rule] =
     meta.match(/\[(\d+x\d+)-([0-9A-Fa-f]+)-([A-Z])\]/);
 
@@ -34,23 +40,19 @@ function pickRandomBoard() {
   return parseBoard(src);
 }
 
+function isAmplified(x,y) {
+  return (x + y) % 2 === 0;
+}
 
 /* =========================
    Game State
    ========================= */
-
-const dirs8 = [
-  [-1,-1],[0,-1],[1,-1],
-  [-1, 0],      [1, 0],
-  [-1, 1],[0, 1],[1, 1],
-];
 
 let game;
 let board;
 let W, H;
 let gameOver = false;
 let firstClick = true;
-
 
 /* =========================
    Init
@@ -68,14 +70,9 @@ function initGame() {
   render();
 }
 
-
 /* =========================
    Number Calculation
    ========================= */
-
-function isAmplified(x,y) {
-  return (x + y) % 2 === 0;
-}
 
 function calcNumbers() {
   for (let y = 0; y < H; y++) {
@@ -93,14 +90,25 @@ function calcNumbers() {
   }
 }
 
-
 /* =========================
    Open Logic
    ========================= */
 
+function revealAllMines() {
+  board.flat().forEach(c => {
+    if (c.isMine) c.isOpen = true;
+  });
+}
+
 function openCell(x,y) {
   const c = board[y]?.[x];
   if (!c || c.isOpen || c.isFlagged) return;
+
+  // 初回クリック保護（safe指定マスのみ）
+  if (firstClick) {
+    if (!c.safe) return;
+    firstClick = false;
+  }
 
   c.isOpen = true;
 
@@ -114,12 +122,6 @@ function openCell(x,y) {
   if (c.adjacent === 0) {
     dirs8.forEach(([dx,dy]) => openCell(x+dx,y+dy));
   }
-}
-
-function revealAllMines() {
-  board.flat().forEach(c => {
-    if (c.isMine) c.isOpen = true;
-  });
 }
 
 function countFlags(x,y) {
@@ -136,7 +138,6 @@ function openAround(x,y) {
   });
 }
 
-
 /* =========================
    Render
    ========================= */
@@ -150,6 +151,7 @@ function render() {
     const d = document.createElement("div");
     d.className = "cell";
 
+    // Aルール：チェス柄
     if (game.rule === "A" && !c.isOpen && isAmplified(x,y))
       d.style.background = "#bdbdbd";
 
@@ -165,20 +167,15 @@ function render() {
     d.onclick = () => {
       if (gameOver) return;
 
-      if (firstClick && c.safe) {
-        firstClick = false;
-      }
-
+      // 数字クリック（chord）
       if (c.isOpen && c.adjacent > 0) {
         if (countFlags(x,y) === c.adjacent) openAround(x,y);
         render();
         return;
       }
 
-      if (!c.isFlagged) {
-        openCell(x,y);
-        render();
-      }
+      openCell(x,y);
+      render();
     };
 
     d.oncontextmenu = e => {
@@ -192,7 +189,6 @@ function render() {
     el.appendChild(d);
   }));
 }
-
 
 /* =========================
    Start

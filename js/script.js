@@ -207,7 +207,7 @@ function toggleFlagMode(){
    Init (example)
 ================================ */
 
-fetch("board.map").then(r=>r.text()).then(t=>{
+fetch("./map/board.map").then(r=>r.text()).then(t=>{
    parseBoardText(t);
    render();
 });

@@ -1,25 +1,26 @@
 /* =========================
-   Fetch & Init
+   Load board file
    ========================= */
 
 fetch("./map/board.map")
   .then(r => r.text())
-  .then(text => {
-    const boards = parseBoards(text);
-    game = pickRandomBoard(boards);
-    initGame(game);
+  .then(t => {
+    SOURCE_TEXT = t;
+    initGame();
   });
+
+let SOURCE_TEXT = "";
+
 
 /* =========================
    Utilities
    ========================= */
 
-function parseBoards(text) {
-  return text.trim().split(/\n\s*\n/).map(parseBoard);
-}
+function parseBoard(text) {
+  const blocks = text.trim().split(/\n\s*\n/);
+  const src = blocks[Math.floor(Math.random() * blocks.length)];
 
-function parseBoard(block) {
-  const lines = block.trim().split("\n");
+  const lines = src.trim().split("\n");
   const meta = lines.pop();
 
   const [, size, hex, rule] =
@@ -41,9 +42,6 @@ function parseBoard(block) {
   return { W, H, rule, grid };
 }
 
-function pickRandomBoard(arr) {
-  return arr[Math.floor(Math.random() * arr.length)];
-}
 
 /* =========================
    Game State
@@ -55,26 +53,31 @@ const dirs8 = [
   [-1, 1],[0, 1],[1, 1],
 ];
 
-let board, W, H, game;
+let game, board, W, H;
 let gameOver = false;
+let firstClick = true;
+
 
 /* =========================
    Init
    ========================= */
 
-function initGame(g) {
-  game = g;
-  board = g.grid;
-  W = g.W;
-  H = g.H;
+function initGame() {
+  game = parseBoard(SOURCE_TEXT);
+  board = game.grid;
+  W = game.W;
+  H = game.H;
+
   gameOver = false;
+  firstClick = true;
 
   calcNumbers();
   render();
 }
 
+
 /* =========================
-   Numbers
+   Number Calculation
    ========================= */
 
 function isAmplified(x,y) {
@@ -82,18 +85,21 @@ function isAmplified(x,y) {
 }
 
 function calcNumbers() {
-  for (let y=0;y<H;y++) for (let x=0;x<W;x++) {
-    const c = board[y][x];
-    if (c.isMine) continue;
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      const c = board[y][x];
+      if (c.isMine) continue;
 
-    c.adjacent = dirs8.reduce((s,[dx,dy])=>{
-      const n = board[y+dy]?.[x+dx];
-      if (!n || !n.isMine) return s;
-      if (game.rule === "A" && isAmplified(x+dx,y+dy)) return s + 2;
-      return s + 1;
-    },0);
+      c.adjacent = dirs8.reduce((s,[dx,dy])=>{
+        const n = board[y+dy]?.[x+dx];
+        if (!n || !n.isMine) return s;
+        if (game.rule === "A" && isAmplified(x+dx,y+dy)) return s + 2;
+        return s + 1;
+      },0);
+    }
   }
 }
+
 
 /* =========================
    Open Logic
@@ -112,29 +118,31 @@ function openCell(x,y) {
     return;
   }
 
-  if (c.adjacent === 0)
-    dirs8.forEach(([dx,dy])=>openCell(x+dx,y+dy));
+  if (c.adjacent === 0) {
+    dirs8.forEach(([dx,dy]) => openCell(x+dx,y+dy));
+  }
 }
 
 function revealAllMines() {
-  board.flat().forEach(c=>{
+  board.flat().forEach(c => {
     if (c.isMine) c.isOpen = true;
   });
 }
 
 function countFlags(x,y) {
   return dirs8.reduce(
-    (s,[dx,dy])=>s+(board[y+dy]?.[x+dx]?.isFlagged?1:0),0
+    (s,[dx,dy]) => s + (board[y+dy]?.[x+dx]?.isFlagged ? 1 : 0),
+    0
   );
 }
 
 function openAround(x,y) {
-  dirs8.forEach(([dx,dy])=>{
+  dirs8.forEach(([dx,dy]) => {
     const c = board[y+dy]?.[x+dx];
-    if (c && !c.isOpen && !c.isFlagged)
-      openCell(x+dx,y+dy);
+    if (c && !c.isOpen && !c.isFlagged) openCell(x+dx,y+dy);
   });
 }
+
 
 /* =========================
    Render
@@ -149,33 +157,44 @@ function render() {
     const d = document.createElement("div");
     d.className = "cell";
 
-    if (game.rule==="A" && !c.isOpen && isAmplified(x,y))
-      d.style.background="#bdbdbd";
+    if (game.rule === "A" && !c.isOpen && isAmplified(x,y))
+      d.style.background = "#bdbdbd";
 
     if (c.isOpen) {
       d.classList.add("open");
-      if (c.isMine) d.textContent="●";
-      else if (c.adjacent>0) d.textContent=c.adjacent;
-    } else if (c.isFlagged) {
-      d.textContent="⚑";
+      if (c.isMine) d.textContent = "●";
+      else if (c.adjacent > 0) d.textContent = c.adjacent;
+    }
+    else if (c.isFlagged) {
+      d.textContent = "⚑";
     }
 
-    d.onclick=()=>{
+    d.onclick = () => {
       if (gameOver) return;
 
-      if (c.isOpen && c.adjacent>0) {
-        if (countFlags(x,y)===c.adjacent) openAround(x,y);
+      // ★ 最初のクリックも必ず開く
+      if (firstClick) {
+        firstClick = false;
+      }
+
+      if (c.isOpen && c.adjacent > 0) {
+        if (countFlags(x,y) === c.adjacent) openAround(x,y);
         render();
         return;
       }
 
-      openCell(x,y);
-      render();
+      if (!c.isFlagged) {
+        openCell(x,y);
+        render();
+      }
     };
 
-    d.oncontextmenu=e=>{
+    d.oncontextmenu = e => {
       e.preventDefault();
-      if(!c.isOpen){c.isFlagged=!c.isFlagged;render();}
+      if (!c.isOpen) {
+        c.isFlagged = !c.isFlagged;
+        render();
+      }
     };
 
     el.appendChild(d);

@@ -33,7 +33,6 @@ function isAmplified(x, y) {
 
 let board, W, H;
 let gameOver = false;
-let firstClick = true;
 let totalMines = 0;
 
 /* =========================
@@ -56,7 +55,7 @@ function parseBoard(text) {
     row.split("").map(c => ({
       raw: c,
       isMine: c === "1",
-      isOpen: false,
+      isOpen: c === "-",   // ★ 最初から開いておく
       isFlagged: false,
       adjacent: 0
     }))
@@ -79,14 +78,16 @@ function initGame() {
   H = game.H;
 
   gameOver = false;
-  firstClick = true;
 
-  // map側ルールをUIで上書き
   if (currentRule !== "V") {
     game.rule = currentRule;
   }
 
   calcNumbers(game.rule);
+
+  // ★ 初期 open セルからの 0 展開を保証
+  expandInitialOpens();
+
   updateMineCount();
   render();
 }
@@ -105,7 +106,7 @@ function setRule(r) {
 }
 
 function setDifficulty(d) {
-  difficulty = d; // 今は保持のみ（将来 map 切替用）
+  difficulty = d;
   resetGame();
 }
 
@@ -159,6 +160,19 @@ function openCell(x, y) {
   }
 }
 
+function expandInitialOpens() {
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      const c = board[y][x];
+      if (c.isOpen && c.adjacent === 0) {
+        for (const [dx, dy] of dirs8) {
+          openCell(x + dx, y + dy);
+        }
+      }
+    }
+  }
+}
+
 function revealAllMines() {
   board.flat().forEach(c => {
     if (c.isMine) c.isOpen = true;
@@ -181,7 +195,7 @@ function countFlags(x, y, rule) {
   return count;
 }
 
-function openAround(x, y, rule) {
+function openAround(x, y) {
   for (const [dx, dy] of dirs8) {
     openCell(x + dx, y + dy);
   }
@@ -229,18 +243,9 @@ function render() {
       d.onclick = () => {
         if (gameOver) return;
 
-        if (firstClick) {
-          firstClick = false;
-          if (c.isMine) {
-            c.isMine = false;
-            totalMines--;
-            calcNumbers(currentRule);
-          }
-        }
-
         if (c.isOpen && c.adjacent > 0) {
           if (countFlags(x, y, currentRule) === c.adjacent) {
-            openAround(x, y, currentRule);
+            openAround(x, y);
           }
         } else {
           openCell(x, y);

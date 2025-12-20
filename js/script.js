@@ -1,170 +1,213 @@
-/**********************
- * Board Text Parser
- **********************/
-
-/*
-  盤面ファイル仕様（例）:
-
-  ------
-  010010
-  001000
-  000100
-  ------
-  [(6x6)-1A2F-C]
-
-  ・0 = 安全マス
-  ・1 = 地雷
-  ・- = 初期安全（最初に必ず開く候補）
-*/
-
-export function parseBoardText(text) {
-  const lines = text.trim().split(/\r?\n/);
-
-  // メタデータ行
-  const metaLine = lines.pop();
-  const metaMatch = metaLine.match(/\[\((\d+)x(\d+)\)-([0-9A-Fa-f]+)-([A-Z])\]/);
-  if (!metaMatch) throw new Error("Invalid metadata");
-
-  const [, W, H, hexId, rule] = metaMatch;
-  const width = Number(W);
-  const height = Number(H);
-
-  // 盤面データ
-  const grid = [];
-  let safeCells = [];
-
-  for (let y = 0; y < height; y++) {
-    const row = lines[y];
-    if (!row || row.length !== width) {
-      throw new Error("Invalid board size");
-    }
-
-    grid[y] = [];
-    for (let x = 0; x < width; x++) {
-      const ch = row[x];
-      if (ch === "1") {
-        grid[y][x] = 1;
-      } else if (ch === "0") {
-        grid[y][x] = 0;
-      } else if (ch === "-") {
-        grid[y][x] = 0;
-        safeCells.push({ x, y });
-      } else {
-        throw new Error("Invalid cell character");
-      }
-    }
-  }
-
-  return {
-    width,
-    height,
-    mines: grid,
-    safeCells,
-    rule,
-    hexId
-  };
-}
-
-/**********************
- * Game Core
- **********************/
+/* ===============================
+   Extended Minesweeper script.js
+================================ */
 
 const dirs8 = [
   [-1,-1],[0,-1],[1,-1],
-  [-1, 0],      [1, 0],
-  [-1, 1],[0, 1],[1, 1]
+  [-1, 0],       [1, 0],
+  [-1, 1],[0, 1],[1, 1],
 ];
 
-export class MinesweeperGame {
-  constructor(parsed) {
-    this.W = parsed.width;
-    this.H = parsed.height;
-    this.rule = parsed.rule;
+let W = 0, H = 0;
+let board = [];
+let rule = "V";
+let gameOver = false;
+let firstClick = true;
+let flagMode = false; // mobile toggle
+let totalMines = 0;
 
-    this.board = Array.from({ length: this.H }, (_, y) =>
-      Array.from({ length: this.W }, (_, x) => ({
-        isMine: parsed.mines[y][x] === 1,
-        isOpen: false,
-        isFlagged: false,
-        adjacent: 0
-      }))
-    );
+/* ===============================
+   Text Board Parser
+================================ */
 
-    this.gameOver = false;
+function parseBoardText(text) {
+  const lines = text.trim().split("\n");
+  const meta = lines.pop().match(/\[(.+?)\]/)[1];
+  const [size, hex, r] = meta.split("-");
+  rule = r;
 
-    this.calculateNumbers();
-  }
+  const [w, h] = size.split("x").map(Number);
+  W = w; H = h;
 
-  isAmplified(x, y) {
-    return (x + y) % 2 === 0;
-  }
+  createBoard();
 
-  calculateNumbers() {
-    for (let y = 0; y < this.H; y++) {
-      for (let x = 0; x < this.W; x++) {
-        const c = this.board[y][x];
-        if (c.isMine) continue;
-
-        c.adjacent = dirs8.reduce((sum, [dx, dy]) => {
-          const n = this.board[y + dy]?.[x + dx];
-          if (!n || !n.isMine) return sum;
-          if (this.rule === "A" && this.isAmplified(x + dx, y + dy)) {
-            return sum + 2;
-          }
-          return sum + 1;
-        }, 0);
+  lines.forEach((line, y) => {
+    [...line].forEach((ch, x) => {
+      if (ch === "1") {
+        board[y][x].isMine = true;
+        totalMines++;
       }
-    }
-  }
-
-  openCell(x, y) {
-    const c = this.board[y]?.[x];
-    if (!c || c.isOpen || c.isFlagged || this.gameOver) return;
-
-    c.isOpen = true;
-
-    if (c.isMine) {
-      this.gameOver = true;
-      this.revealAllMines();
-      return;
-    }
-
-    if (c.adjacent === 0) {
-      dirs8.forEach(([dx, dy]) => this.openCell(x + dx, y + dy));
-    }
-  }
-
-  toggleFlag(x, y) {
-    const c = this.board[y]?.[x];
-    if (!c || c.isOpen || this.gameOver) return;
-    c.isFlagged = !c.isFlagged;
-  }
-
-  revealAllMines() {
-    for (const row of this.board) {
-      for (const c of row) {
-        if (c.isMine) c.isOpen = true;
+      if (ch === "-") {
+        board[y][x].isOpen = true;
       }
-    }
-  }
+    });
+  });
 
-  remainingMines() {
-    let flags = 0;
-    for (const row of this.board) {
-      for (const c of row) {
-        if (c.isFlagged) flags++;
-      }
-    }
-    return Math.max(0, this.countTotalMines() - flags);
-  }
+  calculateNumbers();
+}
 
-  countTotalMines() {
-    let n = 0;
-    for (const row of this.board) {
-      for (const c of row) {
-        if (c.isMine) n++;
-      }
-    }
-    return n;
+/* ===============================
+   Board
+================================ */
+
+function createBoard() {
+  board = Array.from({ length: H }, () =>
+    Array.from({ length: W }, () => ({
+      isMine:false,
+      isOpen:false,
+      isFlagged:false,
+      adjacent:0
+    }))
+  );
+  document.getElementById("board")
+    .style.gridTemplateColumns = `repeat(${W},32px)`;
+}
+
+function isAmplified(x,y){
+  return (x + y) % 2 === 0;
+}
+
+/* ===============================
+   Numbers
+================================ */
+
+function calculateNumbers() {
+  for (let y=0;y<H;y++) for (let x=0;x<W;x++) {
+    if (board[y][x].isMine) continue;
+    board[y][x].adjacent = dirs8.reduce((s,[dx,dy])=>{
+      const n = board[y+dy]?.[x+dx];
+      if (!n || !n.isMine) return s;
+      if (rule === "A" && isAmplified(x+dx,y+dy)) return s+2;
+      return s+1;
+    },0);
   }
 }
+
+/* ===============================
+   Open Logic
+================================ */
+
+function openCell(x,y){
+  const c = board[y]?.[x];
+  if (!c || c.isOpen || c.isFlagged) return;
+  c.isOpen = true;
+  if (c.adjacent === 0 && !c.isMine)
+    dirs8.forEach(([dx,dy])=>openCell(x+dx,y+dy));
+}
+
+function countFlags(x,y){
+  return dirs8.reduce(
+    (s,[dx,dy])=>s+(board[y+dy]?.[x+dx]?.isFlagged?1:0),0
+  );
+}
+
+function openAround(x,y){
+  for(const [dx,dy] of dirs8){
+    const c = board[y+dy]?.[x+dx];
+    if(c && !c.isOpen && !c.isFlagged){
+      if(c.isMine){
+        gameOver = true;
+        revealAllMines();
+        alert("Game Over");
+        return;
+      }
+      openCell(x+dx,y+dy);
+    }
+  }
+}
+
+/* ===============================
+   Render
+================================ */
+
+function remainingMines(){
+  const flags = board.flat().filter(c=>c.isFlagged).length;
+  return totalMines - flags;
+}
+
+function revealAllMines(){
+  board.flat().forEach(c=>{
+    if(c.isMine) c.isOpen = true;
+  });
+}
+
+function render(){
+  document.getElementById("mineCount").textContent =
+    `💣 残り: ${remainingMines()}`;
+
+  const el = document.getElementById("board");
+  el.innerHTML = "";
+
+  board.forEach((row,y)=>row.forEach((c,x)=>{
+    const d = document.createElement("div");
+    d.className = "cell";
+
+    if (rule==="A" && !c.isOpen && isAmplified(x,y))
+      d.style.background="#bdbdbd";
+
+    if(c.isOpen){
+      d.classList.add("open");
+      if(c.isMine){ d.textContent="●"; d.classList.add("mine"); }
+      else if(c.adjacent>0){
+        d.textContent=c.adjacent;
+        d.classList.add("n"+Math.min(c.adjacent,8));
+      }
+    }else if(c.isFlagged){
+      d.textContent="⚑";
+      d.classList.add("flag");
+    }
+
+    d.onclick=()=>{
+      if(gameOver) return;
+
+      if(flagMode){
+        if(!c.isOpen){
+          c.isFlagged=!c.isFlagged;
+          render();
+        }
+        return;
+      }
+
+      if(c.isOpen && c.adjacent>0){
+        if(countFlags(x,y)===c.adjacent) openAround(x,y);
+        render();
+        return;
+      }
+
+      if(!c.isOpen && !c.isFlagged){
+        if(c.isMine){
+          gameOver=true;
+          revealAllMines();
+          alert("Game Over");
+        }else openCell(x,y);
+        render();
+      }
+    };
+
+    d.oncontextmenu=e=>{
+      e.preventDefault();
+      if(!c.isOpen){ c.isFlagged=!c.isFlagged; render(); }
+    };
+
+    el.appendChild(d);
+  }));
+}
+
+/* ===============================
+   Mobile Toggle
+================================ */
+
+function toggleFlagMode(){
+  flagMode=!flagMode;
+  document.getElementById("mode").textContent =
+    flagMode ? "⚑ 旗" : "⛏ 掘る";
+}
+
+/* ===============================
+   Init (example)
+================================ */
+
+fetch("board.map").then(r=>r.text()).then(t=>{
+   parseBoardText(t);
+   render();
+});

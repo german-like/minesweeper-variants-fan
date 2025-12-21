@@ -95,9 +95,22 @@ function initGame() {
   gameOver = false;
   firstClick = true;
 
+  // ★ safe マスを最初から開く
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      if (board[y][x].safe) {
+        board[y][x].isOpen = true;
+      }
+    }
+  }
+
   totalMines = board.flat().filter(c => c.isMine).length;
 
   calcNumbers(currentRule);
+
+  // safe 起点の 0 展開
+  expandInitialOpens();
+
   updateMineCount();
   render();
 }

@@ -31,8 +31,10 @@ function isAmplified(x, y) {
    Game State
    ========================= */
 
+let game;
 let board, W, H;
 let gameOver = false;
+let firstClick = true;
 let totalMines = 0;
 
 /* =========================
@@ -48,10 +50,10 @@ function parseBoard(text) {
     const m = meta.match(/\[(\d+x\d+)-([0-9A-Fa-f]+)-([A-Z])\]/);
     if (!m) return null;
     return { block: b, rule: m[3] };
-  }).filter(x => x && x.rule === selectedRule);
+  }).filter(x => x && x.rule === currentRule);
 
   if (candidates.length === 0) {
-    alert(`Rule ${selectedRule} に対応する盤面がありません`);
+    alert(`Rule ${currentRule} に対応する盤面がありません`);
     throw new Error("No matching board");
   }
 
@@ -86,10 +88,6 @@ function parseBoard(text) {
 function initGame() {
   game = parseBoard(SOURCE_TEXT);
 
-  if (game.rule !== selectedRule) {
-    console.error("Rule mismatch", game.rule, selectedRule);
-  }
-
   board = game.grid;
   W = game.W;
   H = game.H;
@@ -97,7 +95,10 @@ function initGame() {
   gameOver = false;
   firstClick = true;
 
-  calcNumbers();
+  totalMines = board.flat().filter(c => c.isMine).length;
+
+  calcNumbers(currentRule);
+  updateMineCount();
   render();
 }
 
@@ -165,19 +166,6 @@ function openCell(x, y) {
   if (c.adjacent === 0) {
     for (const [dx, dy] of dirs8) {
       openCell(x + dx, y + dy);
-    }
-  }
-}
-
-function expandInitialOpens() {
-  for (let y = 0; y < H; y++) {
-    for (let x = 0; x < W; x++) {
-      const c = board[y][x];
-      if (c.isOpen && c.adjacent === 0) {
-        for (const [dx, dy] of dirs8) {
-          openCell(x + dx, y + dy);
-        }
-      }
     }
   }
 }

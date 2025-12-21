@@ -41,29 +41,42 @@ let totalMines = 0;
 
 function parseBoard(text) {
   const blocks = text.trim().split(/\n\s*\n/);
-  const src = blocks[Math.floor(Math.random() * blocks.length)];
+
+  const candidates = blocks.map(b => {
+    const lines = b.trim().split("\n");
+    const meta = lines[lines.length - 1];
+    const m = meta.match(/\[(\d+x\d+)-([0-9A-Fa-f]+)-([A-Z])\]/);
+    if (!m) return null;
+    return { block: b, rule: m[3] };
+  }).filter(x => x && x.rule === selectedRule);
+
+  if (candidates.length === 0) {
+    alert(`Rule ${selectedRule} に対応する盤面がありません`);
+    throw new Error("No matching board");
+  }
+
+  const src = candidates[Math.floor(Math.random() * candidates.length)].block;
 
   const lines = src.trim().split("\n");
   const meta = lines.pop();
 
-  const [, size, , rule] =
+  const [, size, hex, rule] =
     meta.match(/\[(\d+x\d+)-([0-9A-Fa-f]+)-([A-Z])\]/);
 
-  const [w, h] = size.split("x").map(Number);
+  const [W, H] = size.split("x").map(Number);
 
   const grid = lines.map(row =>
     row.split("").map(c => ({
       raw: c,
       isMine: c === "1",
-      isOpen: c === "-",   // ★ 最初から開いておく
+      safe: c === "-",
+      isOpen: false,
       isFlagged: false,
       adjacent: 0
     }))
   );
 
-  totalMines = grid.flat().filter(c => c.isMine).length;
-
-  return { W: w, H: h, rule, grid };
+  return { W, H, rule, grid };
 }
 
 /* =========================
@@ -71,24 +84,20 @@ function parseBoard(text) {
    ========================= */
 
 function initGame() {
-  const game = parseBoard(SOURCE_TEXT);
+  game = parseBoard(SOURCE_TEXT);
+
+  if (game.rule !== selectedRule) {
+    console.error("Rule mismatch", game.rule, selectedRule);
+  }
 
   board = game.grid;
   W = game.W;
   H = game.H;
 
   gameOver = false;
+  firstClick = true;
 
-  if (currentRule !== "V") {
-    game.rule = currentRule;
-  }
-
-  calcNumbers(game.rule);
-
-  // ★ 初期 open セルからの 0 展開を保証
-  expandInitialOpens();
-
-  updateMineCount();
+  calcNumbers();
   render();
 }
 

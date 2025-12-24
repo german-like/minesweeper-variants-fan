@@ -10,13 +10,13 @@ const reloadBtn = document.getElementById("reload");
 const BOARD_URL = "./board.txt";
 
 let parsedBoards = [];
-let currentIndex = 0;
+let currentIndex = -1;
 
 // ===== 盤面分割 =====
 
 function splitBoards(text) {
   return text
-    .split(/\n\s*\n/) // 空行区切り
+    .split(/\n\s*\n/)
     .map(b => b.trim())
     .filter(b => b.length > 0);
 }
@@ -88,11 +88,27 @@ async function loadAllBoards() {
   if (!res.ok) throw new Error("盤面取得失敗");
 
   const text = await res.text();
-  const blocks = splitBoards(text);
+  parsedBoards = splitBoards(text).map(parseBoardText);
 
-  parsedBoards = blocks.map(parseBoardText);
-  currentIndex = 0;
-  loadFromParsed(parsedBoards[0]);
+  loadRandomBoard();
+}
+
+// ===== ランダム選択 =====
+
+function loadRandomBoard() {
+  if (parsedBoards.length === 0) return;
+
+  let next;
+  if (parsedBoards.length === 1) {
+    next = 0;
+  } else {
+    do {
+      next = Math.floor(Math.random() * parsedBoards.length);
+    } while (next === currentIndex);
+  }
+
+  currentIndex = next;
+  loadFromParsed(parsedBoards[currentIndex]);
 }
 
 // ===== 盤面生成 =====
@@ -208,13 +224,7 @@ function render() {
   }
 }
 
-// ===== 盤面切替 =====
-
-reloadBtn.onclick = () => {
-  currentIndex = (currentIndex + 1) % parsedBoards.length;
-  loadFromParsed(parsedBoards[currentIndex]);
-};
-
 // ===== 初期化 =====
 
+reloadBtn.onclick = loadRandomBoard;
 loadAllBoards();

@@ -9,6 +9,18 @@ const reloadBtn = document.getElementById("reload");
 
 const BOARD_URL = "./board.txt";
 
+let parsedBoards = [];
+let currentIndex = 0;
+
+// ===== 盤面分割 =====
+
+function splitBoards(text) {
+  return text
+    .split(/\n\s*\n/) // 空行区切り
+    .map(b => b.trim())
+    .filter(b => b.length > 0);
+}
+
 // ===== テキスト解析 =====
 
 function parseBoardText(text) {
@@ -71,13 +83,16 @@ function parseBoardText(text) {
 
 // ===== fetch 読込 =====
 
-async function loadBoardByFetch() {
+async function loadAllBoards() {
   const res = await fetch(BOARD_URL);
-  if (!res.ok) throw new Error("盤面ファイル取得失敗");
+  if (!res.ok) throw new Error("盤面取得失敗");
 
   const text = await res.text();
-  const parsed = parseBoardText(text);
-  loadFromParsed(parsed);
+  const blocks = splitBoards(text);
+
+  parsedBoards = blocks.map(parseBoardText);
+  currentIndex = 0;
+  loadFromParsed(parsedBoards[0]);
 }
 
 // ===== 盤面生成 =====
@@ -167,12 +182,12 @@ function render() {
         div.classList.add("open");
         if (cell.mine) {
           div.classList.add("mine");
-          div.textContent = "💣";
+          div.textContent = "●";
         } else if (cell.count > 0) {
           div.textContent = String(cell.count);
         }
       } else if (cell.flag) {
-        div.textContent = "🚩";
+        div.textContent = "⚑";
       }
 
       div.onclick = () => {
@@ -193,7 +208,13 @@ function render() {
   }
 }
 
+// ===== 盤面切替 =====
+
+reloadBtn.onclick = () => {
+  currentIndex = (currentIndex + 1) % parsedBoards.length;
+  loadFromParsed(parsedBoards[currentIndex]);
+};
+
 // ===== 初期化 =====
 
-reloadBtn.onclick = () => loadBoardByFetch();
-loadBoardByFetch();
+loadAllBoards();

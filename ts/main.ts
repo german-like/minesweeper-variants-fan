@@ -1,280 +1,221 @@
-/* =========================
-   Load board file
-   ========================= */
+// ===== 型定義 =====
 
-let SOURCE_TEXT = "";
-let currentRule = "V";
-let difficulty = "normal";
+type Cell = {
+  mine: boolean;
+  open: boolean;
+  flag: boolean;
+  count: number;
+};
 
-fetch("./map/board.map")
-  .then(r => r.text())
-  .then(t => {
-    SOURCE_TEXT = t;
-    initGame();
-  });
+type MetaData = {
+  rows: number;
+  cols: number;
+  hexCode: string;
+  rule: string;
+};
 
-/* =========================
-   Utilities
-   ========================= */
+type ParsedBoard = {
+  meta: MetaData;
+  mines: boolean[][];
+  initialOpen: boolean[][];
+};
 
-const dirs8 = [
-  [-1,-1],[0,-1],[1,-1],
-  [-1, 0],      [1, 0],
-  [-1, 1],[0, 1],[1, 1],
-];
+// ===== グローバル =====
 
-function isAmplified(x, y) {
-  return (x + y) % 2 === 0;
-}
+let ROWS = 0;
+let COLS = 0;
 
-/* =========================
-   Game State
-   ========================= */
+const board: Cell[][] = [];
+const boardEl = document.getElementById("board") as HTMLDivElement;
+const reloadBtn = document.getElementById("reload") as HTMLButtonElement;
 
-let game;
-let board, W, H;
-let gameOver = false;
-let firstClick = true;
-let totalMines = 0;
+const BOARD_URL = "./map/board.map"; // ← fetch するファイル
 
-/* =========================
-   Parse Board
-   ========================= */
+// ===== テキスト解析 =====
 
-function parseBoard(text) {
-  const blocks = text.trim().split(/\n\s*\n/);
+function parseBoardText(text: string): ParsedBoard {
+  const lines = text
+    .split("\n")
+    .map(l => l.trim())
+    .filter(l => l.length > 0);
 
-  const candidates = blocks.map(b => {
-    const lines = b.trim().split("\n");
-    const meta = lines[lines.length - 1];
-    const m = meta.match(/\[(\d+x\d+)-([0-9A-Fa-f]+)-([A-Z])\]/);
-    if (!m) return null;
-    return { block: b, rule: m[3] };
-  }).filter(x => x && x.rule === currentRule);
+  const metaLine = lines.find(l => l.startsWith("[") && l.endsWith("]"));
+  if (!metaLine) throw new Error("メタデータ行がありません");
 
-  if (candidates.length === 0) {
-    alert(`Rule ${currentRule} に対応する盤面がありません`);
-    throw new Error("No matching board");
-  }
-
-  const src = candidates[Math.floor(Math.random() * candidates.length)].block;
-
-  const lines = src.trim().split("\n");
-  const meta = lines.pop();
-
-  const [, size, hex, rule] =
-    meta.match(/\[(\d+x\d+)-([0-9A-Fa-f]+)-([A-Z])\]/);
-
-  const [W, H] = size.split("x").map(Number);
-
-  const grid = lines.map(row =>
-    row.split("").map(c => ({
-      raw: c,
-      isMine: c === "1",
-      safe: c === "-",
-      isOpen: false,
-      isFlagged: false,
-      adjacent: 0
-    }))
+  const match = metaLine.match(
+    /^\[(\d+)x(\d+)-([0-9A-Fa-f]+)-([A-Za-z])\]$/
   );
+  if (!match) throw new Error("メタデータ形式エラー");
 
-  return { W, H, rule, grid };
-}
+  const [, r, c, hexCode, rule] = match;
 
-/* =========================
-   Init / Reset
-   ========================= */
+  const meta: MetaData = {
+    rows: Number(r),
+    cols: Number(c),
+    hexCode,
+    rule,
+  };
 
-function initGame() {
-  game = parseBoard(SOURCE_TEXT);
+  const boardLines = lines.filter(l => l !== metaLine);
+  if (boardLines.length !== meta.rows)
+    throw new Error("行数不一致");
 
-  board = game.grid;
-  W = game.W;
-  H = game.H;
+  const mines: boolean[][] = [];
+  const initialOpen: boolean[][] = [];
 
-  gameOver = false;
-  firstClick = true;
+  for (let y = 0; y < meta.rows; y++) {
+    const line = boardLines[y];
+    if (line.length !== meta.cols)
+      throw new Error(`列数不一致 行 ${y}`);
 
-  // ★ safe マスを最初から開く
-  for (let y = 0; y < H; y++) {
-    for (let x = 0; x < W; x++) {
-      if (board[y][x].safe) {
-        board[y][x].isOpen = true;
+    mines[y] = [];
+    initialOpen[y] = [];
+
+    for (let x = 0; x < meta.cols; x++) {
+      const ch = line[x];
+      if (ch === "1") {
+        mines[y][x] = true;
+        initialOpen[y][x] = false;
+      } else if (ch === "0") {
+        mines[y][x] = false;
+        initialOpen[y][x] = false;
+      } else if (ch === "-") {
+        mines[y][x] = false;
+        initialOpen[y][x] = true;
+      } else {
+        throw new Error(`不正文字 '${ch}'`);
       }
     }
   }
 
-  totalMines = board.flat().filter(c => c.isMine).length;
+  return { meta, mines, initialOpen };
+}
 
-  calcNumbers(currentRule);
+// ===== fetch 読込 =====
 
-  // safe 起点の 0 展開
-  expandInitialOpens();
+async function loadBoardByFetch() {
+  const res = await fetch(BOARD_URL);
+  if (!res.ok) throw new Error("盤面ファイル取得失敗");
 
-  updateMineCount();
+  const text = await res.text();
+  const parsed = parseBoardText(text);
+  loadFromParsed(parsed);
+}
+
+// ===== 盤面生成 =====
+
+function loadFromParsed(parsed: ParsedBoard) {
+  ROWS = parsed.meta.rows;
+  COLS = parsed.meta.cols;
+
+  board.length = 0;
+  boardEl.style.gridTemplateColumns = `repeat(${COLS}, 30px)`;
+
+  for (let y = 0; y < ROWS; y++) {
+    board[y] = [];
+    for (let x = 0; x < COLS; x++) {
+      board[y][x] = {
+        mine: parsed.mines[y][x],
+        open: parsed.initialOpen[y][x],
+        flag: false,
+        count: 0,
+      };
+    }
+  }
+
+  calculateCounts();
   render();
 }
 
-function resetGame() {
-  initGame();
+// ===== 周囲地雷数 =====
+
+function calculateCounts() {
+  for (let y = 0; y < ROWS; y++) {
+    for (let x = 0; x < COLS; x++) {
+      if (board[y][x].mine) continue;
+
+      let count = 0;
+      for (let dy = -1; dy <= 1; dy++) {
+        for (let dx = -1; dx <= 1; dx++) {
+          const ny = y + dy;
+          const nx = x + dx;
+          if (
+            ny >= 0 && ny < ROWS &&
+            nx >= 0 && nx < COLS &&
+            board[ny][nx].mine
+          ) {
+            count++;
+          }
+        }
+      }
+      board[y][x].count = count;
+    }
+  }
 }
 
-/* =========================
-   Rule / Difficulty UI
-   ========================= */
+// ===== マス操作 =====
 
-function setRule(r) {
-  currentRule = r;
-  resetGame();
-}
+function openCell(y: number, x: number) {
+  const cell = board[y][x];
+  if (cell.open || cell.flag) return;
 
-function setDifficulty(d) {
-  difficulty = d;
-  resetGame();
-}
+  cell.open = true;
 
-/* =========================
-   Number Calculation
-   ========================= */
-
-function calcNumbers(rule) {
-  for (let y = 0; y < H; y++) {
-    for (let x = 0; x < W; x++) {
-      const c = board[y][x];
-      if (c.isMine) continue;
-
-      c.adjacent = 0;
-
-      for (const [dx, dy] of dirs8) {
-        const n = board[y + dy]?.[x + dx];
-        if (!n || !n.isMine) continue;
-
-        if (rule === "A" && isAmplified(x + dx, y + dy)) {
-          c.adjacent += 2;
-        } else {
-          c.adjacent += 1;
+  if (!cell.mine && cell.count === 0) {
+    for (let dy = -1; dy <= 1; dy++) {
+      for (let dx = -1; dx <= 1; dx++) {
+        const ny = y + dy;
+        const nx = x + dx;
+        if (ny >= 0 && ny < ROWS && nx >= 0 && nx < COLS) {
+          openCell(ny, nx);
         }
       }
     }
   }
 }
 
-/* =========================
-   Open Logic
-   ========================= */
-
-function openCell(x, y) {
-  const c = board[y]?.[x];
-  if (!c || c.isOpen || c.isFlagged) return;
-
-  c.isOpen = true;
-
-  if (c.isMine) {
-    gameOver = true;
-    revealAllMines();
-    alert("Game Over");
-    return;
-  }
-
-  if (c.adjacent === 0) {
-    for (const [dx, dy] of dirs8) {
-      openCell(x + dx, y + dy);
-    }
-  }
-}
-
-function revealAllMines() {
-  board.flat().forEach(c => {
-    if (c.isMine) c.isOpen = true;
-  });
-}
-
-function countFlags(x, y, rule) {
-  let count = 0;
-
-  for (const [dx, dy] of dirs8) {
-    const c = board[y + dy]?.[x + dx];
-    if (!c || !c.isFlagged) continue;
-
-    if (rule === "A" && isAmplified(x + dx, y + dy)) {
-      count += 2;
-    } else {
-      count += 1;
-    }
-  }
-  return count;
-}
-
-function openAround(x, y) {
-  for (const [dx, dy] of dirs8) {
-    openCell(x + dx, y + dy);
-  }
-}
-
-/* =========================
-   UI Helpers
-   ========================= */
-
-function updateMineCount() {
-  const flags = board.flat().filter(c => c.isFlagged).length;
-  document.getElementById("mineCount").textContent =
-    Math.max(totalMines - flags, 0);
-}
-
-/* =========================
-   Render
-   ========================= */
+// ===== 描画 =====
 
 function render() {
-  const el = document.getElementById("board");
-  el.innerHTML = "";
-  el.style.gridTemplateColumns = `repeat(${W},32px)`;
+  boardEl.innerHTML = "";
 
-  board.forEach((row, y) =>
-    row.forEach((c, x) => {
-      const d = document.createElement("div");
-      d.className = "cell";
+  for (let y = 0; y < ROWS; y++) {
+    for (let x = 0; x < COLS; x++) {
+      const cell = board[y][x];
+      const div = document.createElement("div");
+      div.className = "cell";
 
-      if (c.isOpen) {
-        d.classList.add("open");
-
-        if (c.isMine) {
-          d.classList.add("mine");
-          d.textContent = "●";
-        } else if (c.adjacent > 0) {
-          d.textContent = c.adjacent;
-          d.classList.add("n" + Math.min(c.adjacent, 8));
+      if (cell.open) {
+        div.classList.add("open");
+        if (cell.mine) {
+          div.classList.add("mine");
+          div.textContent = "💣";
+        } else if (cell.count > 0) {
+          div.textContent = String(cell.count);
         }
-      } else if (c.isFlagged) {
-        d.classList.add("flag");
-        d.textContent = "⚑";
+      } else if (cell.flag) {
+        div.textContent = "🚩";
       }
 
-      d.onclick = () => {
-        if (gameOver) return;
-
-        if (c.isOpen && c.adjacent > 0) {
-          if (countFlags(x, y, currentRule) === c.adjacent) {
-            openAround(x, y);
-          }
-        } else {
-          openCell(x, y);
-        }
-
-        updateMineCount();
+      div.onclick = () => {
+        openCell(y, x);
         render();
       };
 
-      d.oncontextmenu = e => {
+      div.oncontextmenu = e => {
         e.preventDefault();
-        if (!c.isOpen) {
-          c.isFlagged = !c.isFlagged;
-          updateMineCount();
+        if (!cell.open) {
+          cell.flag = !cell.flag;
           render();
         }
       };
 
-      el.appendChild(d);
-    })
-  );
+      boardEl.appendChild(div);
+    }
+  }
 }
+
+// ===== 初期 & 再読込 =====
+
+reloadBtn.onclick = () => loadBoardByFetch();
+loadBoardByFetch();

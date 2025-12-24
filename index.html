@@ -1,48 +1,43 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-<meta charset="UTF-8">
-<title>Extended Minesweeper</title>
-<style>
-body { font-family: system-ui,sans-serif; background:#f5f5f5; padding:20px }
-#board { display:grid; gap:2px; background:#999; padding:4px; width:fit-content }
-.cell {
-  width:32px;height:32px;background:#cfcfcf;border-radius:4px;
-  display:flex;align-items:center;justify-content:center;
-  font-weight:700;cursor:pointer;user-select:none
-}
-.cell.open { background:#fff; cursor:default }
-.cell.mine { background:#ffdddd }
-.cell.flag { color:#d00 }
-.n1{color:#1976d2}.n2{color:#388e3c}.n3{color:#d32f2f}.n4{color:#7b1fa2}
-.n5{color:#f57c00}.n6{color:#00838f}.n7{color:#424242}.n8{color:#000}
-</style>
+  <meta charset="UTF-8" />
+  <title>Minesweeper</title>
+  <style>
+    body {
+      font-family: sans-serif;
+    }
+    #board {
+      display: grid;
+      gap: 2px;
+      margin-top: 10px;
+    }
+    .cell {
+      width: 30px;
+      height: 30px;
+      background: #ccc;
+      text-align: center;
+      line-height: 30px;
+      cursor: pointer;
+      user-select: none;
+      font-weight: bold;
+    }
+    .cell.open {
+      background: #eee;
+      cursor: default;
+    }
+    .cell.mine {
+      background: #f66;
+    }
+  </style>
 </head>
 <body>
+  <h1>Minesweeper</h1>
 
-<h1>Extended Minesweeper</h1>
+  <button id="reload">盤面を再読込</button>
 
-<div>
-  <b>Rule:</b>
-  <button onclick="setRule('V')">Vanilla</button>
-  <button onclick="setRule('A')">A: 増幅</button>
-  <button onclick="setRule('C')">C: 廊下</button>
-</div><br>
+  <div id="board"></div>
 
-<div>
-  <b>Difficulty:</b>
-  <button onclick="setDifficulty('easy')">Easy</button>
-  <button onclick="setDifficulty('normal')">Normal</button>
-  <button onclick="setDifficulty('hard')">Hard</button>
-  <button onclick="resetGame()">Reset</button>
-</div><br>
-
-<div id="status">
-  ●　残り地雷数: <span id="mineCount"></span>
-</div>
-<br>
-<div id="board"></div>
-
-<script src="./js/script.js"></script>
+  <script src="./ts/main.ts"></script>
 </body>
 </html>

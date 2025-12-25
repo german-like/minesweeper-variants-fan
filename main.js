@@ -2,15 +2,17 @@
 
 let ROWS = 0;
 let COLS = 0;
+let totalMines = 0;
 
 const board = [];
 const boardEl = document.getElementById("board");
+const infoEl = document.getElementById("info");
 const reloadBtn = document.getElementById("reload");
 
 const BOARD_URL = "./board.txt";
 
 let parsedBoards = [];
-let currentIndex = -1;
+let currentIndex = 0;
 
 // ===== 盤面分割 =====
 
@@ -88,27 +90,11 @@ async function loadAllBoards() {
   if (!res.ok) throw new Error("盤面取得失敗");
 
   const text = await res.text();
-  parsedBoards = splitBoards(text).map(parseBoardText);
+  const blocks = splitBoards(text);
 
-  loadRandomBoard();
-}
-
-// ===== ランダム選択 =====
-
-function loadRandomBoard() {
-  if (parsedBoards.length === 0) return;
-
-  let next;
-  if (parsedBoards.length === 1) {
-    next = 0;
-  } else {
-    do {
-      next = Math.floor(Math.random() * parsedBoards.length);
-    } while (next === currentIndex);
-  }
-
-  currentIndex = next;
-  loadFromParsed(parsedBoards[currentIndex]);
+  parsedBoards = blocks.map(parseBoardText);
+  currentIndex = 0;
+  loadFromParsed(parsedBoards[0]);
 }
 
 // ===== 盤面生成 =====
@@ -118,11 +104,15 @@ function loadFromParsed(parsed) {
   COLS = parsed.meta.cols;
 
   board.length = 0;
+  totalMines = 0;
+
   boardEl.style.gridTemplateColumns = `repeat(${COLS}, 30px)`;
 
   for (let y = 0; y < ROWS; y++) {
     board[y] = [];
     for (let x = 0; x < COLS; x++) {
+      if (parsed.mines[y][x]) totalMines++;
+
       board[y][x] = {
         mine: parsed.mines[y][x],
         open: parsed.initialOpen[y][x],
@@ -183,6 +173,19 @@ function openCell(y, x) {
   }
 }
 
+// ===== 情報表示 =====
+
+function updateInfo() {
+  let flags = 0;
+  for (let y = 0; y < ROWS; y++) {
+    for (let x = 0; x < COLS; x++) {
+      if (board[y][x].flag) flags++;
+    }
+  }
+  infoEl.textContent =
+    `地雷: ${totalMines}　旗: ${flags}　残り: ${totalMines - flags}`;
+}
+
 // ===== 描画 =====
 
 function render() {
@@ -222,9 +225,17 @@ function render() {
       boardEl.appendChild(div);
     }
   }
+
+  updateInfo();
 }
+
+// ===== 盤面切替 =====
+
+reloadBtn.onclick = () => {
+  currentIndex = (currentIndex + 1) % parsedBoards.length;
+  loadFromParsed(parsedBoards[currentIndex]);
+};
 
 // ===== 初期化 =====
 
-reloadBtn.onclick = loadRandomBoard;
 loadAllBoards();

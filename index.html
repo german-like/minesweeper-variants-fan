@@ -4,8 +4,10 @@
   <meta charset="UTF-8" />
   <title>Minesweeper (JS + Fetch)</title>
   <style>
-    body {
-      font-family: sans-serif;
+    body { font-family: sans-serif; }
+    #info {
+      margin-top: 8px;
+      font-weight: bold;
     }
     #board {
       display: grid;
@@ -22,20 +24,15 @@
       user-select: none;
       font-weight: bold;
     }
-    .cell.open {
-      background: #eee;
-      cursor: default;
-    }
-    .cell.mine {
-      background: #f66;
-    }
+    .cell.open { background: #eee; cursor: default; }
+    .cell.mine { background: #f66; }
   </style>
 </head>
 <body>
   <h1>Minesweeper</h1>
 
-  <button id="reload">盤面を再読込</button>
-
+  <button id="reload">次の盤面</button>
+  <div id="info"></div>
   <div id="board"></div>
 
   <script src="main.js"></script>

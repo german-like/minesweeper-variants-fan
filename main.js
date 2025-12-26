@@ -185,12 +185,17 @@ function updateInfo() {
 // ===== 描画 =====
 function render() {
   boardEl.innerHTML = "";
+
   for (let y = 0; y < ROWS; y++) {
     for (let x = 0; x < COLS; x++) {
       const cell = board[y][x];
       const div = document.createElement("div");
       div.className = "cell";
-      if (cell.isDark) div.classList.add("dark"); // CSSで .cell.dark { background: #bbb; } 等を定義
+
+      // ★ここでチェス盤の「濃いマス」クラスを付与
+      if (cell.isDark) {
+        div.classList.add("dark");
+      }
 
       if (cell.open) {
         div.classList.add("open");
@@ -199,18 +204,26 @@ function render() {
           div.textContent = "●";
         } else if (cell.count > 0) {
           div.textContent = String(cell.count);
-          div.setAttribute("data-count", cell.count); // 数字ごとに色を変える用
+          // ルールAで大きな数字（10以上など）が出た時のために色を変えてもOK
+          if (cell.count >= 8) div.style.color = "purple";
         }
       } else if (cell.flag) {
         div.textContent = "⚑";
-        div.classList.add("flag");
       }
 
-      div.onclick = () => { openCell(y, x); render(); };
+      div.onclick = () => {
+        openCell(y, x);
+        render();
+      };
+
       div.oncontextmenu = e => {
         e.preventDefault();
-        if (!cell.open) { cell.flag = !cell.flag; render(); }
+        if (!cell.open) {
+          cell.flag = !cell.flag;
+          render();
+        }
       };
+
       boardEl.appendChild(div);
     }
   }

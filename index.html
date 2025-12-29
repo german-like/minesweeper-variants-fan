@@ -2,77 +2,228 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>独自ルール・マインスイーパ</title>
+    <title>Minesweeper Ex - Professional Edition</title>
     <style>
-        body { font-family: 'Helvetica Neue', Arial, sans-serif; display: flex; flex-direction: column; align-items: center; background: #eef2f3; color: #333; }
+        :root { --bg: #f8f9fa; --panel: #ffffff; --primary: #4a90e2; --accent: #cce0ff; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); display: flex; flex-direction: column; align-items: center; padding: 20px; margin: 0; }
+        #app { background: var(--panel); padding: 25px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); text-align: center; max-width: 500px; width: 100%; }
         
-        /* スタートメニュー */
-        #start-menu { 
-            margin-top: 50px; padding: 30px; background: white; 
-            border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); 
-            text-align: center; display: flex; flex-direction: column; gap: 15px;
-        }
-        #start-menu button {
-            padding: 15px 30px; font-size: 1.1rem; font-weight: bold;
-            cursor: pointer; border: none; border-radius: 8px;
-            background-color: #34495e; color: white; transition: 0.2s;
-        }
-        #start-menu button:hover { background-color: #2c3e50; transform: translateY(-2px); }
+        /* ステータス表示 */
+        .header-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; background: #eee; padding: 10px; border-radius: 8px; font-size: 0.9em; }
+        .stat-box { display: flex; flex-direction: column; }
+        .val { font-weight: bold; font-size: 1.2em; color: var(--primary); }
 
-        /* ゲームエリア */
-        #game-area { display: none; margin-top: 20px; text-align: center; }
-        .controls { margin-bottom: 15px; padding: 15px; background: white; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
-        .stats { font-size: 1.2rem; font-weight: bold; margin-bottom: 10px; line-height: 1.6; }
-        
-        /* 盤面 */
-        #board { 
-            display: grid; 
-            gap: 1px; user-select: none; margin: 0 auto;
-        }
-        .cell {
-            width: 30px; height: 30px; display: flex; align-items: center;
-            justify-content: center; font-weight: bold; cursor: pointer;
-            background-color: #ccc;
-        }
-        
-        /* チェス盤模様 (ルールA用) */
-        .cell.dark { background-color: #b8b8b8; }
-        .cell.open { background-color: #eee; cursor: default; }
-        
-        .cell.mine { background-color: #e74c3c !important; color: white; }
-        .cell.flag { background-color: #f1c40f !important; }
-        
-        /* 数字の色 */
-        .cell[data-count="1"] { color: blue; }
-        .cell[data-count="2"] { color: green; }
-        .cell[data-count="3"] { color: red; }
-        .cell[data-count="4"] { color: darkblue; }
-        .cell[data-count="5"] { color: brown; }
-        .cell[data-count="6"] { color: darkcyan; }
-        .cell[data-count="7"] { color: gray; }
+        /* ボード */
+        .board { display: grid; border: 3px solid #444; margin: 20px auto; background-color: #bbb; gap: 1px; user-select: none; }
+        .cell { width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 1.2em; font-weight: bold; transition: background 0.1s; }
+        .cell.unopened { background: #ddd; box-shadow: inset 2px 2px 0 #fff, inset -2px -2px 0 #999; }
+        .cell.opened { background: #eee; box-shadow: inset 1px 1px 0 #999; cursor: default; }
+        .cell.mine { background: #e74c3c; color: white; }
+        .cell.flag { color: #e74c3c; }
+        .cell.amplified-tile { background-color: var(--accent); }
 
-        .btn-sub { padding: 8px 15px; margin: 5px; cursor: pointer; border-radius: 4px; border: 1px solid #ccc; background: #fff; }
+        /* 入力エリア */
+        textarea { width: 100%; height: 80px; margin-top: 15px; font-family: monospace; border: 1px solid #ccc; padding: 8px; border-radius: 5px; box-sizing: border-box; }
+        .btn-group { display: flex; gap: 8px; margin-top: 10px; justify-content: center; }
+        button { background: var(--primary); color: white; border: none; padding: 10px 18px; border-radius: 6px; cursor: pointer; font-weight: bold; }
+        button:hover { opacity: 0.9; }
+        .desc { font-size: 0.8em; color: #666; margin-top: 10px; text-align: left; }
     </style>
 </head>
 <body>
 
-    <div id="start-menu">
-        <h1>Minesweeper Custom</h1>
-        <p>ルールを選択してください</p>
-        <button onclick="startRandomGameByRule('V')">V: バニラ</button>
-        <button onclick="startRandomGameByRule('A')">A: 増幅</button>
-        <button onclick="startRandomGameByRule('B')">B: 分岐</button>
-    </div>
-
-    <div id="game-area">
-        <div class="controls">
-            <div id="info" class="stats"></div>
-            <button class="btn-sub" id="reload">別の盤面へ</button>
-            <button class="btn-sub" onclick="backToMenu()">メニューに戻る</button>
+<div id="app">
+    <h1>Minesweeper Ex</h1>
+    
+    <div class="header-stats">
+        <div class="stat-box">Total Solved <span id="total-solved" class="val">0</span></div>
+        <div class="stat-box">Max Size <span id="max-size" class="val">5x5</span></div>
+        <div class="stat-box" style="grid-column: span 2; border-top: 1px solid #ccc; padding-top: 5px; margin-top: 5px;">
+            Active Rule: <span id="rule-display" class="val">-</span>
         </div>
-        <div id="board"></div>
     </div>
 
-    <script src="main.js"></script>
+    <div id="board" class="board"></div>
+
+    <div class="loader-zone">
+        <textarea id="stage-input" placeholder="Paste stage data here..."></textarea>
+        <div class="btn-group">
+            <button onclick="loadFromInput()">Load Stage</button>
+            <button style="background:#6c757d" onclick="fetchNextSample()">Sample Fetch</button>
+        </div>
+        <div class="desc">
+            ※ 10問クリアごとに 6x6, 7x7, 8x8 と拡大。 <br>
+            ※ Aルール: 青マス地雷はカウント2 / Bルール: 木構造配置
+        </div>
+    </div>
+</div>
+
+<script>
+    let totalSolved = 0;
+    let board = [];
+    let ROWS = 5, COLS = 5, RULE = 'V';
+    let isGameOver = false;
+
+    // --- システム管理 ---
+    function updateProgress() {
+        document.getElementById('total-solved').innerText = totalSolved;
+        let maxSize = "5x5";
+        if (totalSolved >= 30) maxSize = "8x8";
+        else if (totalSolved >= 20) maxSize = "7x7";
+        else if (totalSolved >= 10) maxSize = "6x6";
+        document.getElementById('max-size').innerText = maxSize;
+    }
+
+    // --- データ読み込み系 ---
+    function loadFromInput() {
+        const text = document.getElementById('stage-input').value.trim();
+        if (text) parseAndStart(text);
+    }
+
+    async function fetchStage(url) {
+        try {
+            const res = await fetch(board.txt);
+            const text = await res.text();
+            parseAndStart(text);
+        } catch (e) { alert("Fetch failed. Please check the URL or CORS settings."); }
+    }
+
+    function parseAndStart(text) {
+        const metaMatch = text.match(/\[(\d+)x(\d+)-([^-]+)-([A-Z])\]/);
+        if (!metaMatch) return alert("Invalid Format: [WxH-ID-Rule]");
+
+        const w = parseInt(metaMatch[1]);
+        const h = parseInt(metaMatch[2]);
+        const rule = metaMatch[4];
+
+        // サイズ制限チェック
+        if (totalSolved < 10 && (w > 5 || h > 5)) return alert("Unlock 6x6 at 10 clears!");
+        if (totalSolved < 20 && (w > 6 || h > 6)) return alert("Unlock 7x7 at 20 clears!");
+        if (totalSolved < 30 && (w > 7 || h > 7)) return alert("Unlock 8x8 at 30 clears!");
+
+        COLS = w; ROWS = h; RULE = rule;
+        document.getElementById('rule-display').innerText = RULE;
+        
+        const lines = text.split('\n').filter(l => l && !l.startsWith('['));
+        initBoard(lines);
+    }
+
+    // --- ゲームロジック ---
+    function initBoard(lines) {
+        isGameOver = false;
+        const boardEl = document.getElementById('board');
+        boardEl.style.gridTemplateColumns = `repeat(${COLS}, 40px)`;
+        boardEl.innerHTML = '';
+        board = [];
+
+        for (let r = 0; r < ROWS; r++) {
+            board[r] = [];
+            const rowStr = lines[r] || "";
+            for (let c = 0; c < COLS; c++) {
+                const char = rowStr[c] || '0';
+                board[r][c] = {
+                    r, c, isMine: char === '1', isOpened: false, 
+                    isInitialOpen: char === '-', isFlagged: false,
+                    isAmplified: (r + c) % 2 !== 0, count: 0
+                };
+            }
+        }
+
+        // 数字計算
+        for (let r = 0; r < ROWS; r++) {
+            for (let c = 0; c < COLS; c++) {
+                if (board[r][c].isMine) continue;
+                let sum = 0;
+                getNeighbors(r, c).forEach(n => {
+                    if (board[n.r][n.c].isMine) {
+                        sum += (RULE === 'A' && board[n.r][n.c].isAmplified) ? 2 : 1;
+                    }
+                });
+                board[r][c].count = sum;
+            }
+        }
+
+        // 描画
+        for (let r = 0; r < ROWS; r++) {
+            for (let c = 0; c < COLS; c++) {
+                const cell = board[r][c];
+                const div = document.createElement('div');
+                div.classList.add('cell', 'unopened');
+                if (RULE === 'A' && cell.isAmplified) div.classList.add('amplified-tile');
+                
+                div.addEventListener('click', () => handleLeftClick(r, c));
+                div.addEventListener('contextmenu', (e) => { e.preventDefault(); handleRightClick(r, c); });
+                
+                cell.el = div;
+                boardEl.appendChild(div);
+                if (cell.isInitialOpen) openCell(r, c);
+            }
+        }
+    }
+
+    function getNeighbors(r, c) {
+        const res = [];
+        for (let dr = -1; dr <= 1; dr++) {
+            for (let dc = -1; dc <= 1; dc++) {
+                if (dr === 0 && dc === 0) continue;
+                if (board[r+dr] && board[r+dr][c+dc]) res.push(board[r+dr][c+dc]);
+            }
+        }
+        return res;
+    }
+
+    function handleLeftClick(r, c) {
+        if (isGameOver) return;
+        const cell = board[r][c];
+        if (cell.isOpened) { chord(r, c); return; }
+        if (cell.isFlagged) return;
+        if (cell.isMine) { revealMines(); alert("Game Over"); isGameOver = true; return; }
+        openCell(r, c);
+        checkWin();
+    }
+
+    function openCell(r, c) {
+        const cell = board[r][c];
+        if (cell.isOpened || cell.isFlagged) return;
+        cell.isOpened = true;
+        cell.el.classList.replace('unopened', 'opened');
+        if (cell.count > 0) {
+            cell.el.innerText = cell.count;
+            cell.el.style.color = ['','#00f','#080','#f00','#008','#800','#088','#000','#888'][cell.count];
+        } else {
+            getNeighbors(r, c).forEach(n => openCell(n.r, n.c));
+        }
+    }
+
+    function handleRightClick(r, c) {
+        if (isGameOver || board[r][c].isOpened) return;
+        board[r][c].isFlagged = !board[r][c].isFlagged;
+        board[r][c].el.innerText = board[r][c].isFlagged ? '⚑' : '';
+    }
+
+    function chord(r, c) {
+        const cell = board[r][c];
+        const neighbors = getNeighbors(r, c);
+        const flags = neighbors.filter(n => n.isFlagged).length;
+        if (flags === cell.count) {
+            neighbors.forEach(n => { if(!n.isOpened && !n.isFlagged) handleLeftClick(n.r, n.c); });
+        }
+    }
+
+    function revealMines() {
+        board.flat().forEach(c => { if(c.isMine){ c.el.innerText='⦿'; c.el.classList.add('mine'); } });
+    }
+
+    function checkWin() {
+        if (board.flat().every(c => c.isMine || c.isOpened)) {
+            alert("Clear!");
+            totalSolved++;
+            updateProgress();
+            isGameOver = true;
+        }
+    }
+
+    updateProgress();
+</script>
 </body>
 </html>

@@ -2,32 +2,27 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>Minesweeper Ex - Professional Edition</title>
+    <title>Minesweeper Ex - Professional</title>
     <style>
         :root { --bg: #f8f9fa; --panel: #ffffff; --primary: #4a90e2; --accent: #cce0ff; }
         body { font-family: 'Segoe UI', sans-serif; background: var(--bg); display: flex; flex-direction: column; align-items: center; padding: 20px; margin: 0; }
-        #app { background: var(--panel); padding: 25px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); text-align: center; max-width: 500px; width: 100%; }
+        #app { background: var(--panel); padding: 25px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); text-align: center; max-width: 600px; width: 100%; }
         
-        /* ステータス表示 */
-        .header-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; background: #eee; padding: 10px; border-radius: 8px; font-size: 0.9em; }
+        .header-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; background: #eee; padding: 10px; border-radius: 8px; }
         .stat-box { display: flex; flex-direction: column; }
         .val { font-weight: bold; font-size: 1.2em; color: var(--primary); }
 
-        /* ボード */
-        .board { display: grid; border: 3px solid #444; margin: 20px auto; background-color: #bbb; gap: 1px; user-select: none; }
-        .cell { width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 1.2em; font-weight: bold; transition: background 0.1s; }
+        .board { display: grid; border: 3px solid #444; margin: 20px auto; background-color: #bbb; gap: 1px; user-select: none; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
+        .cell { width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 1.2em; font-weight: bold; }
         .cell.unopened { background: #ddd; box-shadow: inset 2px 2px 0 #fff, inset -2px -2px 0 #999; }
         .cell.opened { background: #eee; box-shadow: inset 1px 1px 0 #999; cursor: default; }
         .cell.mine { background: #e74c3c; color: white; }
         .cell.flag { color: #e74c3c; }
-        .cell.amplified-tile { background-color: var(--accent); }
+        .cell.amplified-tile { background-color: var(--accent); } /* Aルールの青マス */
 
-        /* 入力エリア */
-        textarea { width: 100%; height: 80px; margin-top: 15px; font-family: monospace; border: 1px solid #ccc; padding: 8px; border-radius: 5px; box-sizing: border-box; }
-        .btn-group { display: flex; gap: 8px; margin-top: 10px; justify-content: center; }
-        button { background: var(--primary); color: white; border: none; padding: 10px 18px; border-radius: 6px; cursor: pointer; font-weight: bold; }
-        button:hover { opacity: 0.9; }
-        .desc { font-size: 0.8em; color: #666; margin-top: 10px; text-align: left; }
+        .controls { margin-top: 15px; border-top: 1px solid #ddd; padding-top: 15px; }
+        button { background: var(--primary); color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-weight: bold; }
+        .log { font-size: 0.8em; color: #666; margin-top: 10px; }
     </style>
 </head>
 <body>
@@ -38,23 +33,16 @@
     <div class="header-stats">
         <div class="stat-box">Total Solved <span id="total-solved" class="val">0</span></div>
         <div class="stat-box">Max Size <span id="max-size" class="val">5x5</span></div>
-        <div class="stat-box" style="grid-column: span 2; border-top: 1px solid #ccc; padding-top: 5px; margin-top: 5px;">
-            Active Rule: <span id="rule-display" class="val">-</span>
+        <div class="stat-box" style="grid-column: span 2; border-top: 1px solid #ccc; padding-top: 5px;">
+            Stage ID: <span id="stage-id" class="val">-</span> | Rule: <span id="rule-display" class="val">-</span>
         </div>
     </div>
 
     <div id="board" class="board"></div>
 
-    <div class="loader-zone">
-        <textarea id="stage-input" placeholder="Paste stage data here..."></textarea>
-        <div class="btn-group">
-            <button onclick="loadFromInput()">Load Stage</button>
-            <button style="background:#6c757d" onclick="fetchNextSample()">Sample Fetch</button>
-        </div>
-        <div class="desc">
-            ※ 10問クリアごとに 6x6, 7x7, 8x8 と拡大。 <br>
-            ※ Aルール: 青マス地雷はカウント2 / Bルール: 木構造配置
-        </div>
+    <div class="controls">
+        <button onclick="fetchStageFromRepo()">Load Next Stage</button>
+        <p class="log">board.txt から自動読み込み中...</p>
     </div>
 </div>
 
@@ -64,52 +52,55 @@
     let ROWS = 5, COLS = 5, RULE = 'V';
     let isGameOver = false;
 
-    // --- システム管理 ---
-    function updateProgress() {
-        document.getElementById('total-solved').innerText = totalSolved;
-        let maxSize = "5x5";
-        if (totalSolved >= 30) maxSize = "8x8";
-        else if (totalSolved >= 20) maxSize = "7x7";
-        else if (totalSolved >= 10) maxSize = "6x6";
-        document.getElementById('max-size').innerText = maxSize;
-    }
-
-    // --- データ読み込み系 ---
-    function loadFromInput() {
-        const text = document.getElementById('stage-input').value.trim();
-        if (text) parseAndStart(text);
-    }
-
-    async function fetchStage(url) {
+    // --- ステージ読み込みロジック ---
+    async function fetchStageFromRepo() {
         try {
-            const res = await fetch(board.txt);
-            const text = await res.text();
-            parseAndStart(text);
-        } catch (e) { alert("Fetch failed. Please check the URL or CORS settings."); }
+            // 同じディレクトリの board.txt を取得
+            const response = await fetch('board.txt');
+            if (!response.ok) throw new Error("File not found");
+            const text = await response.text();
+            
+            // 空行で分割してステージの配列を作る
+            const stagePool = text.split(/\n\s*\n/).filter(s => s.trim() !== "");
+            
+            // 現在のクリア数に対応するステージを選択（最後まで行ったらループor最後を維持）
+            const targetData = stagePool[totalSolved] || stagePool[stagePool.length - 1];
+            
+            if (targetData) {
+                parseAndStart(targetData);
+            }
+        } catch (e) {
+            console.error(e);
+            alert("board.txtの読み込みに失敗しました。サーバー環境(Live Server等)で実行してください。");
+        }
     }
 
     function parseAndStart(text) {
         const metaMatch = text.match(/\[(\d+)x(\d+)-([^-]+)-([A-Z])\]/);
-        if (!metaMatch) return alert("Invalid Format: [WxH-ID-Rule]");
+        if (!metaMatch) return;
 
-        const w = parseInt(metaMatch[1]);
-        const h = parseInt(metaMatch[2]);
-        const rule = metaMatch[4];
+        COLS = parseInt(metaMatch[1]);
+        ROWS = parseInt(metaMatch[2]);
+        const stageID = metaMatch[3];
+        RULE = metaMatch[4];
 
-        // サイズ制限チェック
-        if (totalSolved < 10 && (w > 5 || h > 5)) return alert("Unlock 6x6 at 10 clears!");
-        if (totalSolved < 20 && (w > 6 || h > 6)) return alert("Unlock 7x7 at 20 clears!");
-        if (totalSolved < 30 && (w > 7 || h > 7)) return alert("Unlock 8x8 at 30 clears!");
+        // 進行状況によるサイズ制限（10問ごとに開放）
+        const allowedSize = totalSolved < 10 ? 5 : totalSolved < 20 ? 6 : totalSolved < 30 ? 7 : 8;
+        if (COLS > allowedSize || ROWS > allowedSize) {
+            alert(`サイズ ${COLS}x${ROWS} はまだ未開放です。現在 ${allowedSize}x${allowedSize} までプレイ可能。`);
+            return;
+        }
 
-        COLS = w; ROWS = h; RULE = rule;
+        document.getElementById('stage-id').innerText = stageID;
         document.getElementById('rule-display').innerText = RULE;
+        document.getElementById('total-solved').innerText = totalSolved;
+        document.getElementById('max-size').innerText = `${allowedSize}x${allowedSize}`;
         
         const lines = text.split('\n').filter(l => l && !l.startsWith('['));
-        initBoard(lines);
+        initGame(lines);
     }
 
-    // --- ゲームロジック ---
-    function initBoard(lines) {
+    function initGame(lines) {
         isGameOver = false;
         const boardEl = document.getElementById('board');
         boardEl.style.gridTemplateColumns = `repeat(${COLS}, 40px)`;
@@ -150,10 +141,8 @@
                 const div = document.createElement('div');
                 div.classList.add('cell', 'unopened');
                 if (RULE === 'A' && cell.isAmplified) div.classList.add('amplified-tile');
-                
                 div.addEventListener('click', () => handleLeftClick(r, c));
                 div.addEventListener('contextmenu', (e) => { e.preventDefault(); handleRightClick(r, c); });
-                
                 cell.el = div;
                 boardEl.appendChild(div);
                 if (cell.isInitialOpen) openCell(r, c);
@@ -161,6 +150,7 @@
         }
     }
 
+    // --- 基本ロジック ---
     function getNeighbors(r, c) {
         const res = [];
         for (let dr = -1; dr <= 1; dr++) {
@@ -216,14 +206,15 @@
 
     function checkWin() {
         if (board.flat().every(c => c.isMine || c.isOpened)) {
-            alert("Clear!");
+            alert("パーフェクト！");
             totalSolved++;
-            updateProgress();
             isGameOver = true;
+            setTimeout(fetchStageFromRepo, 1000); // 1秒後に次のステージ
         }
     }
 
-    updateProgress();
+    // 初回読み込み
+    window.onload = fetchStageFromRepo;
 </script>
 </body>
 </html>
